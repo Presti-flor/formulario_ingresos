@@ -17,19 +17,24 @@ app.get('/', (req, res) => {
   // Leer el parámetro de bloque de la URL
   const bloque = req.query.bloque || '3'; // Si no se pasa el bloque, por defecto es 3
 
-  // Variedades por defecto para el bloque 3
-  let variedades = [
-    { value: 'momentum', label: 'Momentum' },
-    { value: 'quick sand', label: 'Quick Sand' },
-    { value: 'pink floyd', label: 'Pink Floyd' }
-  ];
+  // Variedades y tamaños por defecto según el bloque
+  let variedades = [];
+  let mostrarRuso = false;
 
-  // Cambiar las variedades si el bloque es 4 (ejemplo)
-  if (bloque === '4') {
+  if (bloque === '3') {
+    variedades = [
+      { value: 'momentum', label: 'Momentum' },
+      { value: 'quick sand', label: 'Quick Sand' },
+      { value: 'pink floyd', label: 'Pink Floyd' },
+      { value: 'freedom', label: 'Freedom' },
+    ];
+    mostrarRuso = true; // Mostrar "Ruso" solo para Freedom
+  } else if (bloque === '4') {
     variedades = [
       { value: 'freedom', label: 'Freedom' },
-      { value: 'quick sand', label: 'Quick Sand' }
+      { value: 'hilux', label: 'Hilux' },
     ];
+    mostrarRuso = true; // Mostrar "Ruso" solo para Freedom
   }
 
   // Rellenar el formulario con las variedades correspondientes
@@ -127,7 +132,7 @@ app.post('/submit', async (req, res) => {
 
   const data = {
     fecha: new Date().toLocaleDateString(),
-    bloque: '3', // Bloque por defecto
+    bloque: '3', // Bloque por defecto, puedes ajustarlo según el parámetro de la URL
     variedad,
     tamaño: tamano,
     numero_tallos,
