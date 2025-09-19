@@ -1,15 +1,12 @@
 const { google } = require('googleapis');
-const fs = require('fs');
-const path = require('path');
 
 // Obtener las credenciales desde la variable de entorno
-  console.log(process.env.google_sheets_credentials);
-  const creds = JSON.parse(process.env.google_sheets_credentials); // Parseamos la cadena JSON
-
+console.log(process.env.google_sheets_credentials); // Muestra las credenciales en consola (solo para debugging)
+const creds = JSON.parse(process.env.google_sheets_credentials); // Parseamos la cadena JSON
 
 // Autenticación con Google API
 const auth = new google.auth.GoogleAuth({
-  credentials,
+  credentials: creds, // Usamos las credenciales obtenidas desde la variable de entorno
   scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
 
