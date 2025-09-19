@@ -20,6 +20,7 @@ app.get('/', (req, res) => {
   // Variedades y tamaños por defecto según el bloque
   let variedades = [];
   let mostrarRuso = false;
+  let seleccionVariedad = 'momentum'; // Valor por defecto
 
   if (bloque === '3') {
     variedades = [
@@ -29,12 +30,14 @@ app.get('/', (req, res) => {
       { value: 'freedom', label: 'Freedom' },
     ];
     mostrarRuso = true; // Mostrar "Ruso" solo para Freedom
+    seleccionVariedad = 'momentum'; // Cambia esto si quieres que por defecto sea otra variedad
   } else if (bloque === '4') {
     variedades = [
       { value: 'freedom', label: 'Freedom' },
       { value: 'hilux', label: 'Hilux' },
     ];
     mostrarRuso = true; // Mostrar "Ruso" solo para Freedom
+    seleccionVariedad = 'freedom'; // Cambia esto si quieres que por defecto sea otra variedad
   }
 
   // Rellenar el formulario con las variedades correspondientes
@@ -56,9 +59,9 @@ app.get('/', (req, res) => {
           <p style="font-size: 1.5em; padding: 10px;">${bloque}</p><br><br> <!-- Solo número, no recuadro -->
 
           <label for="variedad">Variedad:</label>
-          <select name="variedad" required id="variedadSelect" onchange="mostrarTamano()">
+          <select name="variedad" required id="variedadSelect" onchange="mostrarTamano()" value="${seleccionVariedad}">
             ${variedades.map(variedad => `
-              <option value="${variedad.value}">${variedad.label}</option>
+              <option value="${variedad.value}" ${seleccionVariedad === variedad.value ? 'selected' : ''}>${variedad.label}</option>
             `).join('')}
           </select><br><br>
 
@@ -111,6 +114,15 @@ app.get('/', (req, res) => {
             }
           }
         }
+
+        // Al cargar la página, si el bloque es "4" y la variedad es "Freedom", se agrega "Ruso" automáticamente
+        window.onload = function() {
+          var variedad = document.getElementById('variedadSelect').value;
+          if (variedad === 'freedom') {
+            selectTamano('largo');  // Establecer por defecto el tamaño "Largo"
+            mostrarTamano(); // Mostrar la opción "Ruso"
+          }
+        };
 
         // Validación del formulario antes de enviarlo
         document.getElementById('registroForm').onsubmit = function(e) {
