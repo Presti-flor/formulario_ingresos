@@ -2,8 +2,10 @@ const { google } = require('googleapis');
 const fs = require('fs');
 const path = require('path');
 
-// Cargar las credenciales desde el archivo JSON
-const credentials = JSON.parse(fs.readFileSync(path.join(__dirname, 'clavesadmin.json')));
+// Obtener las credenciales desde la variable de entorno
+  console.log(process.env.google_sheets_credentials);
+  const creds = JSON.parse(process.env.google_sheets_credentials); // Parseamos la cadena JSON
+
 
 // Autenticación con Google API
 const auth = new google.auth.GoogleAuth({
