@@ -144,18 +144,20 @@ app.get('/', (req, res) => {
 
 // Ruta para recibir y procesar el formulario
 app.post('/submit', async (req, res) => {
-  const { variedad, tamano, numero_tallos, etapa } = req.body;  // Añadimos "etapa" en el body
+  const { variedad, tamano, numero_tallos, etapa } = req.body;  // Ahora recibimos "etapa" desde el formulario
+
+  const bloque = req.query.bloque || '3';  // Obtenemos el bloque desde la URL, por defecto es 3
 
   const data = {
     fecha: new Date().toLocaleDateString(),
-    bloque: '3', // Bloque por defecto, puedes ajustarlo según el parámetro de la URL
+    bloque, // Usamos el bloque que viene de la URL
     variedad,
     tamaño: tamano,
     numero_tallos,
-    etapa,  // Ahora se incluye la etapa en los datos
+    etapa,  // Ahora se incluye la etapa
   };
 
-  console.log(data); // Verifica los datos que se enviarán
+  console.log(data); // Verifica los datos antes de enviarlos
 
   try {
     const result = await addRecord(data);
