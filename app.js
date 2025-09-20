@@ -78,6 +78,9 @@ app.get('/', (req, res) => {
           <label for="numero_tallos">Número de tallos:</label>
           <input type="number" name="numero_tallos" required><br><br>
 
+          <!-- Campo oculto para la etapa -->
+          <input type="hidden" name="etapa" value="${etapa}" />
+
           <input type="submit" value="Enviar">
         </form>
       </div>
@@ -141,7 +144,7 @@ app.get('/', (req, res) => {
 
 // Ruta para recibir y procesar el formulario
 app.post('/submit', async (req, res) => {
-  const { variedad, tamano, numero_tallos } = req.body;
+  const { variedad, tamano, numero_tallos, etapa } = req.body;  // Añadimos "etapa" en el body
 
   const data = {
     fecha: new Date().toLocaleDateString(),
@@ -149,8 +152,10 @@ app.post('/submit', async (req, res) => {
     variedad,
     tamaño: tamano,
     numero_tallos,
-    etapa,
+    etapa,  // Ahora se incluye la etapa en los datos
   };
+
+  console.log(data); // Verifica los datos que se enviarán
 
   try {
     const result = await addRecord(data);
