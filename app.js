@@ -146,10 +146,9 @@ app.get('/', (req, res) => {
 app.post('/submit', async (req, res) => {
   const { variedad, tamano, numero_tallos, etapa } = req.body;  // Ahora recibimos "etapa" desde el formulario
 
-  // Obtener el bloque desde la URL
+  // Obtenemos el bloque desde la URL del formulario
   const bloque = req.query.bloque || '3';  // Si no se pasa el bloque, por defecto es 3
 
-  // Ahora usamos el valor de `bloque` que obtenemos de la URL en vez de usar '3' directamente
   const data = {
     fecha: new Date().toLocaleDateString(),
     bloque, // Usamos el bloque que viene de la URL
