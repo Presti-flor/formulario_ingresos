@@ -144,10 +144,11 @@ app.get('/', (req, res) => {
 
 // Ruta para recibir y procesar el formulario
 app.post('/submit', async (req, res) => {
-  const { bloque, variedad, tamano, numero_tallos, etapa, } = req.body;  // Ahora recibimos "etapa" desde el formulario
+  const { variedad, tamano, numero_tallos, etapa } = req.body;  // Ahora recibimos "etapa" desde el formulario
 
-  
+  const bloque = req.query.bloque || '3';  // Obtenemos el bloque desde la URL, por defecto es 3
 
+  // Ahora usamos el valor de `bloque` que obtenemos de la URL en vez de usar '3' directamente
   const data = {
     fecha: new Date().toLocaleDateString(),
     bloque, // Usamos el bloque que viene de la URL
@@ -171,7 +172,3 @@ app.post('/submit', async (req, res) => {
 app.listen(port, () => {
   console.log(`Servidor escuchando en http://localhost:${port}`);
 });
-
-// resctifica este codigo que es de un ofrmulario para registrar dartos, el problemas es que al ingresar el numero de bloque desde
-// la url por ejemplo al poner 4 me pone por defecto 3 entonces arregla eso y que se registre el numero q uno quiera ya que eso se 
-// ve desde un archivode sheets esta es la url : https://formularioingresos-formulario.up.railway.app/?bloque=4&etapa=proceso
