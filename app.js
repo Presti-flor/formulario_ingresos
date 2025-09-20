@@ -146,7 +146,7 @@ app.get('/', (req, res) => {
 app.post('/submit', async (req, res) => {
   const { variedad, tamano, numero_tallos, etapa, } = req.body;  // Ahora recibimos "etapa" desde el formulario
 
-  const bloque = req.query.bloque || '';  // Obtenemos el bloque desde la URL, por defecto es 3
+  const bloque = req.query.bloque || '3, 4';  // Obtenemos el bloque desde la URL, por defecto es 3
 
   const data = {
     fecha: new Date().toLocaleDateString(),
