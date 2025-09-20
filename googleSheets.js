@@ -23,7 +23,7 @@ async function addRecord(data) {
     valueInputOption: 'RAW',
     resource: {
       values: [
-        [data.fecha, data.bloque, data.variedad, data.tamaño, data.numero_tallos],
+        [data.fecha, data.bloque, data.variedad, data.tamaño, data.numero_tallos, data.etapa],
       ],
     },
   });
