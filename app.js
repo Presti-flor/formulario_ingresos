@@ -14,8 +14,9 @@ app.use(bodyParser.json());
 
 // Ruta principal para servir el formulario
 app.get('/', (req, res) => {
-  // Leer el parámetro de bloque de la URL
+  // Leer los parámetros de bloque y etapa desde la URL
   const bloque = req.query.bloque || '3'; // Si no se pasa el bloque, por defecto es 3
+  const etapa = req.query.etapa || ''; // Etapa por defecto está vacía (no visible)
 
   // Variedades y tamaños por defecto según el bloque
   let variedades = [];
@@ -40,7 +41,7 @@ app.get('/', (req, res) => {
     seleccionVariedad = 'freedom'; // Cambia esto si quieres que por defecto sea otra variedad
   }
 
-  // Rellenar el formulario con las variedades correspondientes
+  // Rellenar el formulario con las variedades correspondientes y ajustar el título
   res.send(`
     <html lang="es">
     <head>
@@ -52,7 +53,7 @@ app.get('/', (req, res) => {
     <body>
       <div class="form-container">
         <h1>Registro de Flores / Fin de Corte</h1>
-        <h2>Formulario de Registro para Bloque ${bloque}</h2>
+        <h2>Formulario de Registro para Bloque ${bloque} ${etapa ? `- Etapa: ${etapa.charAt(0).toUpperCase() + etapa.slice(1)}` : ''}</h2>
         <form action="/submit" method="POST" id="registroForm">
           
           <label for="bloque">Bloque:</label>
