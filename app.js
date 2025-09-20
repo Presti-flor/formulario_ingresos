@@ -149,7 +149,7 @@ app.post('/submit', async (req, res) => {
     variedad,
     tamaño: tamano,
     numero_tallos,
-    etapa: '',
+    etapa,
   };
 
   try {
