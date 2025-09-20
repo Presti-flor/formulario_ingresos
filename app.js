@@ -15,7 +15,7 @@ app.use(bodyParser.json());
 // Ruta principal para servir el formulario
 app.get('/', (req, res) => {
   // Leer los parámetros de bloque y etapa desde la URL
-  const bloque = req.query.bloque || ''; // Si no se pasa el bloque, por defecto es 3
+  const bloque = req.query.bloque || '3'; // Si no se pasa el bloque, por defecto es 3
   const etapa = req.query.etapa || ''; // Etapa por defecto está vacía (no visible)
 
   // Variedades y tamaños por defecto según el bloque
