@@ -15,7 +15,7 @@ app.use(bodyParser.json());
 // Ruta principal para servir el formulario
 app.get('/', (req, res) => {
   // Leer los parámetros de bloque y etapa desde la URL
-  const bloque = req.query.bloque || '3'; // Si no se pasa el bloque, por defecto es 3
+  const bloque = req.query.bloque || ''; // Si no se pasa el bloque, por defecto es 3
   const etapa = req.query.etapa || ''; // Etapa por defecto está vacía (no visible)
 
   // Variedades y tamaños por defecto según el bloque
@@ -144,9 +144,9 @@ app.get('/', (req, res) => {
 
 // Ruta para recibir y procesar el formulario
 app.post('/submit', async (req, res) => {
-  const { variedad, tamano, numero_tallos, etapa, } = req.body;  // Ahora recibimos "etapa" desde el formulario
+  const { bloque, variedad, tamano, numero_tallos, etapa, } = req.body;  // Ahora recibimos "etapa" desde el formulario
 
-  const bloque = req.query.bloque || '3';  // Obtenemos el bloque desde la URL, por defecto es 3
+    // Obtenemos el bloque desde la URL, por defecto es 3
 
   const data = {
     fecha: new Date().toLocaleDateString(),
@@ -171,3 +171,7 @@ app.post('/submit', async (req, res) => {
 app.listen(port, () => {
   console.log(`Servidor escuchando en http://localhost:${port}`);
 });
+
+// resctifica este codigo que es de un ofrmulario para registrar dartos, el problemas es que al ingresar el numero de bloque desde
+// la url por ejemplo al poner 4 me pone por defecto 3 entonces arregla eso y que se registre el numero q uno quiera ya que eso se 
+// ve desde un archivode sheets esta es la url : https://formularioingresos-formulario.up.railway.app/?bloque=4&etapa=proceso
