@@ -81,6 +81,9 @@ app.get('/', (req, res) => {
           <!-- Campo oculto para la etapa -->
           <input type="hidden" name="etapa" value="${etapa}" />
 
+          <!-- Enviamos el valor de bloque como un campo oculto -->
+          <input type="hidden" name="bloque" value="${bloque}" />
+
           <input type="submit" value="Enviar">
         </form>
       </div>
@@ -144,10 +147,7 @@ app.get('/', (req, res) => {
 
 // Ruta para recibir y procesar el formulario
 app.post('/submit', async (req, res) => {
-  const { variedad, tamano, numero_tallos, etapa } = req.body;  // Ahora recibimos "etapa" desde el formulario
-
-  // Obtenemos el bloque desde la URL del formulario
-  const bloque = req.query.bloque || '3';  // Si no se pasa el bloque, por defecto es 3
+  const { variedad, tamano, numero_tallos, etapa, bloque } = req.body;  // Ahora recibimos "bloque" y "etapa" desde el formulario
 
   const data = {
     fecha: new Date().toLocaleDateString(),
