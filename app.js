@@ -144,7 +144,7 @@ app.get('/', (req, res) => {
 
 // Ruta para recibir y procesar el formulario
 app.post('/submit', async (req, res) => {
-  const { variedad, tamano, numero_tallos, etapa } = req.body;  // Ahora recibimos "etapa" desde el formulario
+  const { variedad, tamano, numero_tallos, etapa, } = req.body;  // Ahora recibimos "etapa" desde el formulario
 
   const bloque = req.query.bloque || '3';  // Obtenemos el bloque desde la URL, por defecto es 3
 
