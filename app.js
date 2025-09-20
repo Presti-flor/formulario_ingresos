@@ -15,7 +15,7 @@ app.use(bodyParser.json());
 // Ruta principal para servir el formulario
 app.get('/', (req, res) => {
   // Leer los parámetros de bloque y etapa desde la URL
-  const bloque = req.query.bloque || '3'; // Si no se pasa el bloque, por defecto es 3
+  const bloque = req.query.bloque || ''; // Si no se pasa el bloque, por defecto es 3
   const etapa = req.query.etapa || ''; // Etapa por defecto está vacía (no visible)
 
   // Variedades y tamaños por defecto según el bloque
@@ -144,9 +144,9 @@ app.get('/', (req, res) => {
 
 // Ruta para recibir y procesar el formulario
 app.post('/submit', async (req, res) => {
-  const { variedad, tamano, numero_tallos, etapa } = req.body;  // Ahora recibimos "etapa" desde el formulario
+  const { bloque, variedad, tamano, numero_tallos, etapa } = req.body;  // Ahora recibimos "etapa" desde el formulario
 
-  const bloque = req.query.bloque || '3';  // Obtenemos el bloque desde la URL, por defecto es 3
+    // Obtenemos el bloque desde la URL, por defecto es 3
 
   // Ahora usamos el valor de `bloque` que obtenemos de la URL en vez de usar '3' directamente
   const data = {
