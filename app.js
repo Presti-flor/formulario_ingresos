@@ -134,9 +134,18 @@ app.get('/', (req, res) => {
         // Validación del formulario antes de enviarlo
         document.getElementById('registroForm').onsubmit = function(e) {
           var tamano = document.querySelector('input[name="tamano"]').value;
+          var numeroTallos = document.querySelector('input[name="numero_tallos"]').value;
+          // Eliminar cualquier espacio o caracteres indeseados
+          document.querySelector('input[name="numero_tallos"]').value = numeroTallos.trim();
+          
           if (!tamano) {
             e.preventDefault();
             alert('Por favor seleccione el tamaño (Largo, Corto o Ruso si Freedom).');
+          }
+
+          if (!numeroTallos || isNaN(numeroTallos)) {
+            e.preventDefault();
+            alert('Por favor ingrese un número de tallos válido.');
           }
         }
       </script>
@@ -149,12 +158,15 @@ app.get('/', (req, res) => {
 app.post('/submit', async (req, res) => {
   const { variedad, tamano, numero_tallos, etapa, bloque } = req.body;  // Ahora recibimos "bloque" y "etapa" desde el formulario
 
+  // Asegurarse de que los valores sean válidos
+  const sanitizedNumeroTallos = parseInt(numero_tallos, 10);
+
   const data = {
     fecha: new Date().toLocaleDateString(),
     bloque, // Usamos el bloque que viene de la URL
     variedad,
     tamaño: tamano,
-    numero_tallos,
+    numero_tallos: sanitizedNumeroTallos, // Guardamos el número de tallos como número
     etapa,  // Ahora se incluye la etapa
   };
 
