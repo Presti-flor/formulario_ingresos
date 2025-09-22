@@ -17,17 +17,35 @@ const SPREADSHEET_ID = '1JAsY9wkpp-mhawsrZjSXYeHt3BR3Kuf5KNZNM5FJLx0';
 
 // Función para agregar una nueva fila
 async function addRecord(data) {
-  const response = await sheets.spreadsheets.values.append({
-    spreadsheetId: SPREADSHEET_ID,
-    range: 'sobrante!A1', // Especifica la hoja "Sobrante" y la celda inicial
-    valueInputOption: 'RAW',
-    resource: {
-      values: [
-        [data.fecha, data.bloque, data.variedad, data.tamaño, data.numero_tallos, data.etapa],
-      ],
-    },
+  // Limpieza del valor de 'bloque' para asegurarse que es solo un número
+  const sanitizedBloque = data.bloque.replace(/[^0-9]/g, ''); // Elimina cualquier carácter no numérico del bloque
+
+  // Depuración: Verificar los datos antes de enviarlos
+  console.log('Datos antes de enviar a Google Sheets:', {
+    fecha: data.fecha,
+    bloque: sanitizedBloque, // Usamos el bloque limpiado
+    variedad: data.variedad,
+    tamaño: data.tamaño,
+    numero_tallos: data.numero_tallos,
+    etapa: data.etapa
   });
-  return response.data;
+
+  try {
+    const response = await sheets.spreadsheets.values.append({
+      spreadsheetId: SPREADSHEET_ID,
+      range: 'sobrante!A1', // Especifica la hoja "Sobrante" y la celda inicial
+      valueInputOption: 'RAW',
+      resource: {
+        values: [
+          [data.fecha, sanitizedBloque, data.variedad, data.tamaño, data.numero_tallos, data.etapa],
+        ],
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error al guardar en Google Sheets:', error);
+    throw error;  // Lanza el error para que se pueda manejar en el backend
+  }
 }
 
 module.exports = { addRecord };
