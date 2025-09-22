@@ -158,12 +158,20 @@ app.get('/', (req, res) => {
 app.post('/submit', async (req, res) => {
   const { variedad, tamano, numero_tallos, etapa, bloque } = req.body;  // Ahora recibimos "bloque" y "etapa" desde el formulario
 
+  // Sanitización del bloque: Eliminamos cualquier carácter no numérico
+  const sanitizedBloque = bloque.replace(/[^0-9]/g, '');  // Elimina cualquier carácter no numérico del bloque
+
+  // Verifica si el bloque tiene un valor válido
+  if (!sanitizedBloque) {
+    return res.status(400).send('El valor del bloque no es válido.');
+  }
+
   // Asegurarse de que los valores sean válidos
-  const sanitizedNumeroTallos = parseInt(numero_tallos, 10);
+  const sanitizedNumeroTallos = parseInt(numero_tallos, 10); // Convertir a número
 
   const data = {
     fecha: new Date().toLocaleDateString(),
-    bloque, // Usamos el bloque que viene de la URL
+    bloque: sanitizedBloque, // Usamos el bloque sanitizado
     variedad,
     tamaño: tamano,
     numero_tallos: sanitizedNumeroTallos, // Guardamos el número de tallos como número
