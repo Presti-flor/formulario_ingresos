@@ -169,8 +169,11 @@ app.post('/submit', async (req, res) => {
   // Asegurarse de que los valores sean válidos
   const sanitizedNumeroTallos = parseInt(numero_tallos, 10); // Convertir a número
 
+  // Para la fecha en formato YYYY-MM-DD
+  const fecha = new Date().toISOString().split('T')[0]; // Formato "2025-09-22"
+
   const data = {
-    fecha: new Date().toLocaleDateString(),
+    fecha, // Usamos el formato correcto para la fecha
     bloque: sanitizedBloque, // Usamos el bloque sanitizado
     variedad,
     tamaño: tamano,
