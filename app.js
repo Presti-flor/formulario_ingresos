@@ -220,7 +220,6 @@ app.post('/submit', async (req, res) => {
     <head><meta charset="UTF-8"><title>Registro exitoso</title></head>
     <body style="font-family:sans-serif; text-align:center; margin-top:50px;">
       <h1>✅ Datos guardados correctamente</h1>
-      <p>Gracias por su registro.<br>Para ingresar otro, vuelva a escanear el código QR.</p>
     </body>
     </html>
   `);
