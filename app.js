@@ -203,6 +203,7 @@ app.post('/submit', async (req, res) => {
     variedad,
     numero_tallos: sanitizedNumeroTallos,
     etapa: etapa || '',
+    tipo: tipo || '',
   };
 
   // Solo agregar tamaño si NO es nacional
