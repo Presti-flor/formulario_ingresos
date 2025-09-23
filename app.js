@@ -5,20 +5,17 @@ const { addRecord } = require('./googleSheets');
 const app = express();
 const port = 3000;
 
-// Middleware para servir archivos estáticos (CSS, imágenes, etc.)
 app.use(express.static('public'));
-
-// Middleware para parsear el body
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
 // ==================== RUTA PRINCIPAL ====================
 app.get('/', (req, res) => {
-  const bloque = req.query.bloque || '3';   // Bloque por defecto 3
-  const etapa = req.query.etapa || '';      // Etapa opcional
-  const tipo = req.query.tipo || '';        // Nuevo parámetro para Tallos Nacional
+  const bloque = req.query.bloque || '3';
+  const etapa = req.query.etapa || '';
+  const tipo = req.query.tipo || ''; // <--- NUEVO parámetro para diferenciar tipo de formulario
 
-  // Si el tipo es "nacional", mostrar el formulario simplificado
+  // ======= FORMULARIO TIPO NACIONAL =========
   if (tipo === 'nacional') {
     let variedades = [];
     if (bloque === '3') {
@@ -63,7 +60,7 @@ app.get('/', (req, res) => {
             <!-- Campos ocultos -->
             <input type="hidden" name="bloque" value="${bloque}" />
             <input type="hidden" name="etapa" value="${etapa}" />
-            <input type="hidden" name="tipo" value="nacional" />
+            <input type="hidden" name="tipo" value="nacional" />  <!-- <--- Aquí enviamos "nacional" -->
 
             <input type="submit" value="Enviar">
           </form>
@@ -73,7 +70,7 @@ app.get('/', (req, res) => {
     `);
   }
 
-  // ======== FORMULARIO ORIGINAL (con tamaño) =========
+  // ======= FORMULARIO ORIGINAL =========
   let variedades = [];
   let seleccionVariedad = 'momentum';
 
@@ -84,7 +81,6 @@ app.get('/', (req, res) => {
       { value: 'pink floyd', label: 'Pink Floyd' },
       { value: 'freedom', label: 'Freedom' },
     ];
-    seleccionVariedad = 'momentum';
   } else if (bloque === '4') {
     variedades = [
       { value: 'freedom', label: 'Freedom' },
@@ -128,8 +124,10 @@ app.get('/', (req, res) => {
           <label for="numero_tallos">Número de tallos:</label>
           <input type="number" name="numero_tallos" required><br><br>
 
+          <!-- Campos ocultos -->
           <input type="hidden" name="etapa" value="${etapa}" />
           <input type="hidden" name="bloque" value="${bloque}" />
+          <input type="hidden" name="tipo" value="fin_corte" /> <!-- <--- Puedes usar un nombre por defecto -->
 
           <input type="submit" value="Enviar">
         </form>
@@ -203,17 +201,15 @@ app.post('/submit', async (req, res) => {
     variedad,
     numero_tallos: sanitizedNumeroTallos,
     etapa: etapa || '',
-    tipo: tipo || '',
+    tipo: tipo || '',          // <--- GUARDA EL TIPO (nacional o fin_corte)
   };
 
   // Solo agregar tamaño si NO es nacional
   if (tipo !== 'nacional') {
     data.tamaño = tamano;
-  } else {
-    data.tipo = 'nacional';
   }
 
-  console.log(data);
+  console.log(data); // Verifica que "tipo" salga en consola
 
   try {
     await addRecord(data);
