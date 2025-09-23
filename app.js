@@ -42,7 +42,7 @@ app.get('/', (req, res) => {
       </head>
       <body>
         <div class="form-container">
-          <h1>Registro de Flores / Tallos Nacional</h1>
+          <h1>REGISTRO NACIONAL </h1>
           <h2>Bloque ${bloque} ${etapa ? `- Etapa: ${etapa.charAt(0).toUpperCase() + etapa.slice(1)}` : ''}</h2>
           <form action="/submit" method="POST">
             
