@@ -9,21 +9,6 @@ app.use(express.static('public'));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-// Lista de IPs autorizadas
-const authorizedIPs = ['186.102.77.146', '190.61.45.230', '192.168.10.23', '192.168.10.1']; // Agrega las IPs de tus dispositivos autorizados
-
-// Función para validar la IP del dispositivo
-function validateIP(req) {
-  const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress;  // Obtener IP real si hay proxy
-  console.log("IP del cliente:", clientIP); // Para verificar la IP
-  return authorizedIPs.includes(clientIP);
-}
-// Nuevo endpoint GET para recibir parámetros por URL y registrar en Google Sheets
-
-app.get('/api/registrar', async (req, res) => {
-  if (!validateIP(req)) {
-    return res.status(403).json({ mensaje: 'Acceso denegado: la IP no está autorizada' });
-}
 
 // ==================== RUTA PRINCIPAL ====================
 app.get('/', (req, res) => {
