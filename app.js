@@ -5,23 +5,77 @@ const { addRecord } = require('./googleSheets');
 const app = express();
 const port = 3000;
 
-// Middleware para servir archivos estáticos (como el CSS)
-app.use(express.static('public')); // Asegúrate de tener una carpeta "public" con el archivo CSS dentro
+// Middleware para servir archivos estáticos (CSS, imágenes, etc.)
+app.use(express.static('public'));
 
-// Middleware
+// Middleware para parsear el body
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-// Ruta principal para servir el formulario
+// ==================== RUTA PRINCIPAL ====================
 app.get('/', (req, res) => {
-  // Leer los parámetros de bloque y etapa desde la URL
-  const bloque = req.query.bloque || '3'; // Si no se pasa el bloque, por defecto es 3
-  const etapa = req.query.etapa || ''; // Etapa por defecto está vacía (no visible)
+  const bloque = req.query.bloque || '3';   // Bloque por defecto 3
+  const etapa = req.query.etapa || '';      // Etapa opcional
+  const tipo = req.query.tipo || '';        // Nuevo parámetro para Tallos Nacional
 
-  // Variedades y tamaños por defecto según el bloque
+  // Si el tipo es "nacional", mostrar el formulario simplificado
+  if (tipo === 'nacional') {
+    let variedades = [];
+    if (bloque === '3') {
+      variedades = [
+        { value: 'momentum', label: 'Momentum' },
+        { value: 'quick sand', label: 'Quick Sand' },
+        { value: 'pink floyd', label: 'Pink Floyd' },
+        { value: 'freedom', label: 'Freedom' },
+      ];
+    } else if (bloque === '4') {
+      variedades = [
+        { value: 'freedom', label: 'Freedom' },
+        { value: 'hilux', label: 'Hilux' },
+      ];
+    }
+
+    return res.send(`
+      <html lang="es">
+      <head>
+        <meta charset="UTF-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <title>Formulario Tallos Nacional</title>
+        <link rel="stylesheet" type="text/css" href="/style.css"/>
+      </head>
+      <body>
+        <div class="form-container">
+          <h1>Registro de Flores / Tallos Nacional</h1>
+          <h2>Bloque ${bloque} ${etapa ? `- Etapa: ${etapa.charAt(0).toUpperCase() + etapa.slice(1)}` : ''}</h2>
+          <form action="/submit" method="POST">
+            
+            <label for="bloque">Bloque:</label>
+            <p style="font-size: 1.5em; padding: 10px;">${bloque}</p><br><br>
+
+            <label for="variedad">Variedad:</label>
+            <select name="variedad" required>
+              ${variedades.map(v => `<option value="${v.value}">${v.label}</option>`).join('')}
+            </select><br><br>
+
+            <label for="numero_tallos">Número de tallos:</label>
+            <input type="number" name="numero_tallos" required><br><br>
+
+            <!-- Campos ocultos -->
+            <input type="hidden" name="bloque" value="${bloque}" />
+            <input type="hidden" name="etapa" value="${etapa}" />
+            <input type="hidden" name="tipo" value="nacional" />
+
+            <input type="submit" value="Enviar">
+          </form>
+        </div>
+      </body>
+      </html>
+    `);
+  }
+
+  // ======== FORMULARIO ORIGINAL (con tamaño) =========
   let variedades = [];
-  let mostrarRuso = false;
-  let seleccionVariedad = 'momentum'; // Valor por defecto
+  let seleccionVariedad = 'momentum';
 
   if (bloque === '3') {
     variedades = [
@@ -30,24 +84,21 @@ app.get('/', (req, res) => {
       { value: 'pink floyd', label: 'Pink Floyd' },
       { value: 'freedom', label: 'Freedom' },
     ];
-    mostrarRuso = true; // Mostrar "Ruso" solo para Freedom
-    seleccionVariedad = 'momentum'; // Cambia esto si quieres que por defecto sea otra variedad
+    seleccionVariedad = 'momentum';
   } else if (bloque === '4') {
     variedades = [
       { value: 'freedom', label: 'Freedom' },
       { value: 'hilux', label: 'Hilux' },
     ];
-    mostrarRuso = true; // Mostrar "Ruso" solo para Freedom
-    seleccionVariedad = 'freedom'; // Cambia esto si quieres que por defecto sea otra variedad
+    seleccionVariedad = 'freedom';
   }
 
-  // Rellenar el formulario con las variedades correspondientes y ajustar el título
   res.send(`
     <html lang="es">
     <head>
       <meta charset="UTF-8"/>
       <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-      <title>Formulario Fin de Corte / N° Tallos </title>
+      <title>Formulario Fin de Corte / N° Tallos</title>
       <link rel="stylesheet" type="text/css" href="/style.css"/>
     </head>
     <body>
@@ -57,7 +108,7 @@ app.get('/', (req, res) => {
         <form action="/submit" method="POST" id="registroForm">
           
           <label for="bloque">Bloque:</label>
-          <p style="font-size: 1.5em; padding: 10px;">${bloque}</p><br><br> <!-- Solo número, no recuadro -->
+          <p style="font-size: 1.5em; padding: 10px;">${bloque}</p><br><br>
 
           <label for="variedad">Variedad:</label>
           <select name="variedad" required id="variedadSelect" onchange="mostrarTamano()" value="${seleccionVariedad}">
@@ -72,16 +123,12 @@ app.get('/', (req, res) => {
             <div class="tamano-option" id="corto" onclick="selectTamano('corto')">Corto</div>
           </div><br><br>
 
-          <!-- Campo oculto para el tamaño -->
           <input type="hidden" name="tamano" required />
-          
+
           <label for="numero_tallos">Número de tallos:</label>
           <input type="number" name="numero_tallos" required><br><br>
 
-          <!-- Campo oculto para la etapa -->
           <input type="hidden" name="etapa" value="${etapa}" />
-
-          <!-- Enviamos el valor de bloque como un campo oculto -->
           <input type="hidden" name="bloque" value="${bloque}" />
 
           <input type="submit" value="Enviar">
@@ -89,60 +136,48 @@ app.get('/', (req, res) => {
       </div>
 
       <script>
-        // Script para seleccionar el tamaño (Largo / Corto / Ruso)
         function selectTamano(tamano) {
           document.getElementById('largo').classList.remove('selected');
           document.getElementById('corto').classList.remove('selected');
-          document.getElementById('ruso')?.classList.remove('selected'); // Eliminar la selección de "Ruso" si existe
-
+          document.getElementById('ruso')?.classList.remove('selected');
           document.getElementById(tamano).classList.add('selected');
           document.querySelector('input[name="tamano"]').value = tamano;
         }
 
-        // Mostrar opciones de tamaño y "Ruso" solo si se selecciona "Freedom"
         function mostrarTamano() {
           var variedad = document.getElementById('variedadSelect').value;
           var tamanoOptions = document.getElementById('tamanoOptions');
-          
-          // Si la variedad es "Freedom", añadir la opción "Ruso"
           if (variedad === 'freedom') {
-            var rusoOption = document.createElement('div');
-            rusoOption.classList.add('tamano-option');
-            rusoOption.id = 'ruso';
-            rusoOption.innerHTML = 'Ruso';
-            rusoOption.onclick = function() {
-              selectTamano('ruso');
-            };
-            tamanoOptions.appendChild(rusoOption); // Agregar opción "Ruso"
+            if (!document.getElementById('ruso')) {
+              var rusoOption = document.createElement('div');
+              rusoOption.classList.add('tamano-option');
+              rusoOption.id = 'ruso';
+              rusoOption.innerHTML = 'Ruso';
+              rusoOption.onclick = function() { selectTamano('ruso'); };
+              tamanoOptions.appendChild(rusoOption);
+            }
           } else {
             var rusoOption = document.getElementById('ruso');
-            if (rusoOption) {
-              rusoOption.remove(); // Eliminar opción "Ruso" si no es "Freedom"
-            }
+            if (rusoOption) rusoOption.remove();
           }
         }
 
-        // Al cargar la página, si el bloque es "4" y la variedad es "Freedom", se agrega "Ruso" automáticamente
         window.onload = function() {
           var variedad = document.getElementById('variedadSelect').value;
           if (variedad === 'freedom') {
-            selectTamano('largo');  // Establecer por defecto el tamaño "Largo"
-            mostrarTamano(); // Mostrar la opción "Ruso"
+            selectTamano('largo');
+            mostrarTamano();
           }
         };
 
-        // Validación del formulario antes de enviarlo
         document.getElementById('registroForm').onsubmit = function(e) {
           var tamano = document.querySelector('input[name="tamano"]').value;
-          var numeroTallos = document.querySelector('input[name="numero_tallos"]').value;
-          // Eliminar cualquier espacio o caracteres indeseados
-          document.querySelector('input[name="numero_tallos"]').value = numeroTallos.trim();
-          
+          var numeroTallos = document.querySelector('input[name="numero_tallos"]').value.trim();
+          document.querySelector('input[name="numero_tallos"]').value = numeroTallos;
           if (!tamano) {
             e.preventDefault();
             alert('Por favor seleccione el tamaño (Largo, Corto o Ruso si Freedom).');
           }
-
           if (!numeroTallos || isNaN(numeroTallos)) {
             e.preventDefault();
             alert('Por favor ingrese un número de tallos válido.');
@@ -154,37 +189,33 @@ app.get('/', (req, res) => {
   `);
 });
 
-// Ruta para recibir y procesar el formulario
+// ==================== RUTA POST ====================
 app.post('/submit', async (req, res) => {
-  const { variedad, tamano, numero_tallos, etapa, bloque } = req.body;  // Ahora recibimos "bloque" y "etapa" desde el formulario
+  const { variedad, tamano, numero_tallos, etapa, bloque, tipo } = req.body;
 
-  // Sanitización del bloque: Eliminamos cualquier carácter no numérico
-  const sanitizedBloque = bloque.replace(/[^0-9]/g, '');  // Elimina cualquier carácter no numérico del bloque
-
-  // Verifica si el bloque tiene un valor válido
-  if (!sanitizedBloque) {
-    return res.status(400).send('El valor del bloque no es válido.');
-  }
-
-  // Asegurarse de que los valores sean válidos
-  const sanitizedNumeroTallos = parseInt(numero_tallos, 10); // Convertir a número
-
-  // Para la fecha en formato YYYY-MM-DD
-  const fecha = new Date().toISOString().split('T')[0]; // Formato "2025-09-22"
+  const sanitizedBloque = bloque.replace(/[^0-9]/g, '');
+  const sanitizedNumeroTallos = parseInt(numero_tallos, 10);
+  const fecha = new Date().toISOString().split('T')[0];
 
   const data = {
-    fecha, // Usamos el formato correcto para la fecha
-    bloque: sanitizedBloque, // Usamos el bloque sanitizado
+    fecha,
+    bloque: sanitizedBloque,
     variedad,
-    tamaño: tamano,
-    numero_tallos: sanitizedNumeroTallos, // Guardamos el número de tallos como número
-    etapa,  // Ahora se incluye la etapa
+    numero_tallos: sanitizedNumeroTallos,
+    etapa: etapa || '',
   };
 
-  console.log(data); // Verifica los datos antes de enviarlos
+  // Solo agregar tamaño si NO es nacional
+  if (tipo !== 'nacional') {
+    data.tamaño = tamano;
+  } else {
+    data.tipo = 'nacional';
+  }
+
+  console.log(data);
 
   try {
-    const result = await addRecord(data);
+    await addRecord(data);
     res.send('Datos guardados correctamente en Google Sheets.');
   } catch (error) {
     console.error(error);
@@ -192,6 +223,7 @@ app.post('/submit', async (req, res) => {
   }
 });
 
+// ==================== INICIO DEL SERVIDOR ====================
 app.listen(port, () => {
   console.log(`Servidor escuchando en http://localhost:${port}`);
 });
