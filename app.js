@@ -213,13 +213,27 @@ app.post('/submit', async (req, res) => {
 
   console.log(data); // Verifica que "tipo" salga en consola
 
-  try {
+   try {
     await addRecord(data);
-    res.send('Datos guardados correctamente en Google Sheets.');
+    // ✅ Redirección para evitar que al tocar "Atrás" reaparezca el formulario
+    res.redirect('/gracias');
   } catch (error) {
     console.error(error);
     res.status(500).send('Hubo un error al guardar los datos.');
   }
+});
+
+// ==================== PÁGINA DE GRACIAS ====================
+app.get('/gracias', (req, res) => {
+  res.send(`
+    <html lang="es">
+    <head><meta charset="UTF-8"><title>Registro exitoso</title></head>
+    <body style="font-family:sans-serif; text-align:center; margin-top:50px;">
+      <h1>✅ Datos guardados correctamente</h1>
+      <p>Gracias por su registro.<br>Para ingresar otro, vuelva a escanear el código QR.</p>
+    </body>
+    </html>
+  `);
 });
 
 // ==================== INICIO DEL SERVIDOR ====================
