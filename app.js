@@ -100,8 +100,9 @@ app.get('/', (req, res) => {
     <body>
       <div class="form-container">
         <h1>FIN DE CORTE REGISTRO<h1>
-        <h1>Registro / Formulario</h1>
-        <h2>Formulario de Registro para Bloque ${bloque} ${etapa ? `- Etapa: ${etapa.charAt(0).toUpperCase() + etapa.slice(1)}` : ''}</h2>
+        <h1>Registro</h1>
+        <h2>Formulario de Registro para <h2> 
+        <h1>Bloque ${bloque} ${etapa ? `- Etapa: ${etapa.charAt(0).toUpperCase() + etapa.slice(1)}` : ''}</h1>
         <form action="/submit" method="POST" id="registroForm">
           
           <label for="bloque">Bloque:</label>
