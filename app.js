@@ -18,7 +18,12 @@ function validateIP(req) {
   console.log("IP del cliente:", clientIP); // Para verificar la IP
   return authorizedIPs.includes(clientIP);
 }
+// Nuevo endpoint GET para recibir parámetros por URL y registrar en Google Sheets
 
+app.get('/api/registrar', async (req, res) => {
+  if (!validateIP(req)) {
+    return res.status(403).json({ mensaje: 'Acceso denegado: la IP no está autorizada' });
+}
 
 // ==================== RUTA PRINCIPAL ====================
 app.get('/', (req, res) => {
