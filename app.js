@@ -99,7 +99,8 @@ app.get('/', (req, res) => {
     </head>
     <body>
       <div class="form-container">
-        <h1>Registro de Flores / Fin de Corte</h1>
+        <h1>FIN DE CORTE REGISTRO<h1>
+        <h1>Registro / Formulario</h1>
         <h2>Formulario de Registro para Bloque ${bloque} ${etapa ? `- Etapa: ${etapa.charAt(0).toUpperCase() + etapa.slice(1)}` : ''}</h2>
         <form action="/submit" method="POST" id="registroForm">
           
@@ -224,3 +225,7 @@ app.post('/submit', async (req, res) => {
 app.listen(port, () => {
   console.log(`Servidor escuchando en http://localhost:${port}`);
 });
+
+
+
+16 / 09 
