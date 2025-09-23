@@ -215,7 +215,7 @@ app.post('/submit', async (req, res) => {
 
   try {
     await addRecord(data);
-    res.send(`
+    res.redirect(`
     <html lang="es">
     <head><meta charset="UTF-8"><title>Registro exitoso</title></head>
     <body style="font-family:sans-serif; text-align:center; margin-top:50px;">
@@ -223,6 +223,26 @@ app.post('/submit', async (req, res) => {
     </body>
     </html>
   `);
+  app.get('/gracias', (req, res) => {
+  res.send(`
+    <html>
+      <head>
+        <meta charset="UTF-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <title>Registro Exitoso</title>
+        <link rel="stylesheet" type="text/css" href="/style.css"/>
+      </head>
+      <body>
+        <div class="form-container">
+          <h1>✅ Datos guardados correctamente</h1>
+          <p>Gracias por registrar la información.</p>
+          <p>Si necesitas registrar otro bloque, escanea nuevamente el QR.</p>
+        </div>
+      </body>
+    </html>
+  `);
+});
+
   } catch (error) {
     console.error(error);
     res.status(500).send('Hubo un error al guardar los datos.');
