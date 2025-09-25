@@ -1,10 +1,9 @@
-// app.js
 const express = require('express');
 const bodyParser = require('body-parser');
 const { addRecord } = require('./googleSheets');
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = 3000;
 
 app.use(express.static('public'));
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -13,38 +12,22 @@ app.use(bodyParser.json());
 // ====== IP Whitelist Setup ======
 app.set('trust proxy', true); // respeta X-Forwarded-For detrás de proxy/reverse proxy
 
-// Configura por entorno o usa fallback (recuerda: separa con comas)
+// Configura IPs permitidas por variable de entorno: ALLOWED_IPS="127.0.0.1,192.168.1.,10.0.0.5"
 const ALLOWED_IPS = (process.env.ALLOWED_IPS || '186.102.77.146,190.61.45.230,192.168.10.23,192.168.10.1')
   .split(',')
   .map(ip => ip.trim())
   .filter(Boolean);
 
 function getClientIp(req) {
-  let ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
-        || req.headers['x-real-ip']?.trim()
-        || req.ip
-        || req.connection?.remoteAddress
-        || '';
-  if (ip.startsWith('::ffff:')) ip = ip.slice(7); // ::ffff:1.2.3.4 -> 1.2.3.4
-  if (ip === '::1') ip = '127.0.0.1';
+  let ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || req.connection?.remoteAddress || '';
+  if (ip.startsWith('::ffff:')) ip = ip.replace('::ffff:', ''); // normaliza IPv6-mapeado
   return ip;
 }
 
 function ipWhitelist(req, res, next) {
-  // En dev, si no hay lista, no bloquea; en prod, aplica todo.
-  const isProd = process.env.NODE_ENV === 'production';
-  if ((!ALLOWED_IPS.length || !isProd) && process.env.FORCE_WHITELIST !== '1') {
-    return next();
-  }
+  if (!ALLOWED_IPS.length) return next(); // en dev, si no configuras IPs, no bloquea
   const ip = getClientIp(req);
-
-  // Coincidencia exacta o por prefijo (terminado en punto, ej. "192.168.10.")
-  const ok = ALLOWED_IPS.some(allowed =>
-    ip === allowed || (allowed.endsWith('.') && ip.startsWith(allowed))
-  );
-
-  console.log('[WHITELIST]', { clientIp: ip, allowed: ALLOWED_IPS, ok });
-
+  const ok = ALLOWED_IPS.some(allowed => ip === allowed || (allowed.endsWith('.') && ip.startsWith(allowed)));
   if (!ok) {
     console.warn(`Bloqueado: IP ${ip} no permitida`);
     return res.status(403).send('Acceso denegado: IP no autorizada para enviar formularios.');
@@ -103,10 +86,6 @@ app.get('/', (req, res) => {
             <input type="hidden" name="bloque" value="${bloque}" />
             <input type="hidden" name="etapa" value="${etapa}" />
             <input type="hidden" name="tipo" value="nacional" />
-
-            <!-- OPCIONAL: token anti abuso
-            <input type="hidden" name="token" value="${process.env.SUBMIT_TOKEN || ''}" />
-            -->
 
             <input type="submit" value="Enviar">
           </form>
@@ -237,12 +216,7 @@ app.get('/', (req, res) => {
 
 // ==================== RUTA POST ====================
 app.post('/submit', ipWhitelist, async (req, res) => {
-  const { variedad, tamano, numero_tallos, etapa, bloque, tipo, token } = req.body;
-
-  // (OPCIONAL) Valida token si lo usas
-  if (process.env.SUBMIT_TOKEN && token !== process.env.SUBMIT_TOKEN) {
-    return res.status(401).send('Token inválido.');
-  }
+  const { variedad, tamano, numero_tallos, etapa, bloque, tipo } = req.body;
 
   const sanitizedBloque = (bloque || '').replace(/[^0-9]/g, '');
   const sanitizedNumeroTallos = parseInt(numero_tallos, 10);
@@ -287,3 +261,5 @@ app.post('/submit', ipWhitelist, async (req, res) => {
 app.listen(port, () => {
   console.log(`Servidor escuchando en http://localhost:${port}`);
 });
+
+///me sale ip no autorizada para enviar los formularios pero ya las ingrese rectifica:
