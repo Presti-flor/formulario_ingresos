@@ -1,9 +1,10 @@
+// app.js
 const express = require('express');
 const bodyParser = require('body-parser');
 const { addRecord } = require('./googleSheets');
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 app.use(express.static('public'));
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -12,22 +13,34 @@ app.use(bodyParser.json());
 // ====== IP Whitelist Setup ======
 app.set('trust proxy', true); // respeta X-Forwarded-For detrás de proxy/reverse proxy
 
-// Configura IPs permitidas por variable de entorno: ALLOWED_IPS="127.0.0.1,192.168.1.,10.0.0.5"
+// Configura por entorno o usa fallback (separadas por coma)
 const ALLOWED_IPS = (process.env.ALLOWED_IPS || '186.102.77.146,190.61.45.230,192.168.10.23,192.168.10.1')
   .split(',')
   .map(ip => ip.trim())
   .filter(Boolean);
 
 function getClientIp(req) {
-  let ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || req.connection?.remoteAddress || '';
-  if (ip.startsWith('::ffff:')) ip = ip.replace('::ffff:', ''); // normaliza IPv6-mapeado
+  let ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
+        || req.headers['x-real-ip']?.trim()
+        || req.ip
+        || req.connection?.remoteAddress
+        || '';
+  if (ip.startsWith('::ffff:')) ip = ip.slice(7); // ::ffff:1.2.3.4 -> 1.2.3.4
+  if (ip === '::1') ip = '127.0.0.1';
   return ip;
 }
 
 function ipWhitelist(req, res, next) {
-  if (!ALLOWED_IPS.length) return next(); // en dev, si no configuras IPs, no bloquea
+  // En dev, si no hay lista, no bloquea (quita esta línea si quieres hard-lock siempre)
+  if (!ALLOWED_IPS.length) return next();
+
   const ip = getClientIp(req);
-  const ok = ALLOWED_IPS.some(allowed => ip === allowed || (allowed.endsWith('.') && ip.startsWith(allowed)));
+  const ok = ALLOWED_IPS.some(allowed =>
+    ip === allowed || (allowed.endsWith('.') && ip.startsWith(allowed)) // prefijos tipo 192.168.10.
+  );
+
+  console.log('[WHITELIST]', { clientIp: ip, ok, ALLOWED_IPS });
+
   if (!ok) {
     console.warn(`Bloqueado: IP ${ip} no permitida`);
     return res.status(403).send('Acceso denegado: IP no autorizada para enviar formularios.');
@@ -35,8 +48,17 @@ function ipWhitelist(req, res, next) {
   next();
 }
 
-// ==================== RUTA PRINCIPAL ====================
-app.get('/', (req, res) => {
+// ====== Anti-cache para GETs del formulario y pantalla de éxito ======
+function noStore(req, res, next) {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  res.set('Surrogate-Control', 'no-store');
+  next();
+}
+
+// ==================== RUTA PRINCIPAL (FORM) ====================
+app.get('/', noStore, (req, res) => {
   const bloque = req.query.bloque || '3';
   const etapa = req.query.etapa || '';
   const tipo = req.query.tipo || ''; // nacional | fin_corte (default)
@@ -65,12 +87,15 @@ app.get('/', (req, res) => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
         <title>Formulario Tallos Nacional</title>
         <link rel="stylesheet" type="text/css" href="/style.css"/>
+        <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate"/>
+        <meta http-equiv="Pragma" content="no-cache"/>
+        <meta http-equiv="Expires" content="0"/>
       </head>
       <body class="theme-nacional">
         <div class="form-container">
           <h1 class="title">REGISTRO NACIONAL</h1>
           <h2 class="subtitle">Bloque ${bloque} ${etapa ? `- Etapa: ${etapa.charAt(0).toUpperCase() + etapa.slice(1)}` : ''}</h2>
-          <form action="/submit" method="POST">
+          <form action="/submit" method="POST" autocomplete="off" id="nacionalForm">
             <label for="bloque">Bloque:</label>
             <p style="font-size: 1.5em; padding: 10px;">${bloque}</p><br><br>
 
@@ -90,6 +115,15 @@ app.get('/', (req, res) => {
             <input type="submit" value="Enviar">
           </form>
         </div>
+
+        <script>
+          // Si vuelve con el botón atrás (bfcache), resetea
+          window.addEventListener('pageshow', function (e) {
+            if (e.persisted) {
+              document.getElementById('nacionalForm')?.reset();
+            }
+          });
+        </script>
       </body>
       </html>
     `);
@@ -121,6 +155,9 @@ app.get('/', (req, res) => {
       <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
       <title>Formulario Fin de Corte / N° Tallos</title>
       <link rel="stylesheet" type="text/css" href="/style.css"/>
+      <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate"/>
+      <meta http-equiv="Pragma" content="no-cache"/>
+      <meta http-equiv="Expires" content="0"/>
     </head>
     <body class="theme-default">
       <div class="form-container">
@@ -129,7 +166,7 @@ app.get('/', (req, res) => {
         <h2>Formulario de Registro para</h2>
         <h1>Bloque ${bloque} ${etapa ? `- Etapa: ${etapa.charAt(0).toUpperCase() + etapa.slice(1)}` : ''}</h1>
 
-        <form action="/submit" method="POST" id="registroForm">
+        <form action="/submit" method="POST" id="registroForm" autocomplete="off">
           <label for="bloque">Bloque:</label>
           <p style="font-size: 1.5em; padding: 10px;">${bloque}</p><br><br>
 
@@ -195,6 +232,7 @@ app.get('/', (req, res) => {
           }
         };
 
+        // Validación y limpieza básica
         document.getElementById('registroForm').onsubmit = function(e) {
           var tamano = document.querySelector('input[name="tamano"]').value;
           var numeroTallos = document.querySelector('input[name="numero_tallos"]').value.trim();
@@ -208,6 +246,15 @@ app.get('/', (req, res) => {
             alert('Por favor ingrese un número de tallos válido.');
           }
         }
+
+        // Si vuelve con el botón atrás (bfcache), resetea y limpia estilos
+        window.addEventListener('pageshow', function (e) {
+          if (e.persisted) {
+            const f = document.getElementById('registroForm');
+            f?.reset();
+            ['largo','corto','ruso'].forEach(id => document.getElementById(id)?.classList.remove('selected'));
+          }
+        });
       </script>
     </body>
     </html>
@@ -236,30 +283,56 @@ app.post('/submit', ipWhitelist, async (req, res) => {
     data.tamaño = tamano;
   }
 
-  console.log('[SUBMIT]', {
-    fromIp: getClientIp(req),
-    data
-  });
+  console.log('[SUBMIT]', { fromIp: getClientIp(req), data });
 
   try {
     await addRecord(data);
-    res.send(`
-      <html lang="es">
-      <head><meta charset="UTF-8"><title>Registro exitoso</title></head>
-      <body style="font-family:sans-serif; text-align:center; margin-top:50px;">
-        <h1>✅ Datos guardados correctamente</h1>
-      </body>
-      </html>
-    `);
+    // PRG: Post -> Redirect (303) -> Get (pantalla de éxito)
+    return res.redirect(303, `/exito?tipo=${encodeURIComponent(tipo || '')}`);
   } catch (error) {
     console.error(error);
-    res.status(500).send('Hubo un error al guardar los datos.');
+    return res.status(500).send('Hubo un error al guardar los datos.');
   }
+});
+
+// ==================== RUTA DE ÉXITO ====================
+app.get('/exito', noStore, (req, res) => {
+  const tipo = req.query.tipo || '';
+  res.send(`
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+      <title>Registro exitoso</title>
+      <link rel="stylesheet" type="text/css" href="/style.css"/>
+      <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate"/>
+      <meta http-equiv="Pragma" content="no-cache"/>
+      <meta http-equiv="Expires" content="0"/>
+    </head>
+    <body class="${tipo === 'nacional' ? 'theme-nacional' : 'theme-default'}">
+      <div class="form-container" style="text-align:center; padding:40px;">
+        <h1>✅ Datos guardados correctamente</h1>
+        <p>Tu registro de <strong>${tipo || 'fin_corte'}</strong> fue procesado.</p>
+        <p style="margin-top:24px;">
+          <a href="/${tipo ? `?tipo=${encodeURIComponent(tipo)}` : ''}" style="text-decoration:none;">
+            <button style="padding:12px 16px; border-radius:10px; border:none; cursor:pointer;">
+              Nuevo registro
+            </button>
+          </a>
+        </p>
+      </div>
+      <script>
+        // Evita re-navegar a una versión cacheada
+        if (window.history && window.history.replaceState) {
+          window.history.replaceState(null, document.title, window.location.href);
+        }
+      </script>
+    </body>
+    </html>
+  `);
 });
 
 // ==================== INICIO DEL SERVIDOR ====================
 app.listen(port, () => {
   console.log(`Servidor escuchando en http://localhost:${port}`);
 });
-
-///me sale ip no autorizada para enviar los formularios pero ya las ingrese rectifica:
