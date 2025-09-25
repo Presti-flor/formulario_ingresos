@@ -9,12 +9,37 @@ app.use(express.static('public'));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
+// ====== IP Whitelist Setup ======
+app.set('trust proxy', true); // respeta X-Forwarded-For detrás de proxy/reverse proxy
+
+// Configura IPs permitidas por variable de entorno: ALLOWED_IPS="127.0.0.1,192.168.1.,10.0.0.5"
+const ALLOWED_IPS = (process.env.ALLOWED_IPS || '186.102.77.146', '190.61.45.230', '192.168.10.23', '192.168.10.1')
+  .split(',')
+  .map(ip => ip.trim())
+  .filter(Boolean);
+
+function getClientIp(req) {
+  let ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || req.connection?.remoteAddress || '';
+  if (ip.startsWith('::ffff:')) ip = ip.replace('::ffff:', ''); // normaliza IPv6-mapeado
+  return ip;
+}
+
+function ipWhitelist(req, res, next) {
+  if (!ALLOWED_IPS.length) return next(); // en dev, si no configuras IPs, no bloquea
+  const ip = getClientIp(req);
+  const ok = ALLOWED_IPS.some(allowed => ip === allowed || (allowed.endsWith('.') && ip.startsWith(allowed)));
+  if (!ok) {
+    console.warn(`Bloqueado: IP ${ip} no permitida`);
+    return res.status(403).send('Acceso denegado: IP no autorizada para enviar formularios.');
+  }
+  next();
+}
 
 // ==================== RUTA PRINCIPAL ====================
 app.get('/', (req, res) => {
   const bloque = req.query.bloque || '3';
   const etapa = req.query.etapa || '';
-  const tipo = req.query.tipo || ''; // <--- NUEVO parámetro para diferenciar tipo de formulario
+  const tipo = req.query.tipo || ''; // nacional | fin_corte (default)
 
   // ======= FORMULARIO TIPO NACIONAL =========
   if (tipo === 'nacional') {
@@ -41,12 +66,11 @@ app.get('/', (req, res) => {
         <title>Formulario Tallos Nacional</title>
         <link rel="stylesheet" type="text/css" href="/style.css"/>
       </head>
-      <body>
+      <body class="theme-nacional">
         <div class="form-container">
-          <h1>REGISTRO NACIONAL </h1>
-          <h2>Bloque ${bloque} ${etapa ? `- Etapa: ${etapa.charAt(0).toUpperCase() + etapa.slice(1)}` : ''}</h2>
+          <h1 class="title">REGISTRO NACIONAL</h1>
+          <h2 class="subtitle">Bloque ${bloque} ${etapa ? `- Etapa: ${etapa.charAt(0).toUpperCase() + etapa.slice(1)}` : ''}</h2>
           <form action="/submit" method="POST">
-            
             <label for="bloque">Bloque:</label>
             <p style="font-size: 1.5em; padding: 10px;">${bloque}</p><br><br>
 
@@ -61,7 +85,7 @@ app.get('/', (req, res) => {
             <!-- Campos ocultos -->
             <input type="hidden" name="bloque" value="${bloque}" />
             <input type="hidden" name="etapa" value="${etapa}" />
-            <input type="hidden" name="tipo" value="nacional" />  <!-- <--- Aquí enviamos "nacional" -->
+            <input type="hidden" name="tipo" value="nacional" />
 
             <input type="submit" value="Enviar">
           </form>
@@ -71,7 +95,7 @@ app.get('/', (req, res) => {
     `);
   }
 
-  // ======= FORMULARIO ORIGINAL =========
+  // ======= FORMULARIO ORIGINAL (fin de corte) =========
   let variedades = [];
   let seleccionVariedad = 'momentum';
 
@@ -98,14 +122,14 @@ app.get('/', (req, res) => {
       <title>Formulario Fin de Corte / N° Tallos</title>
       <link rel="stylesheet" type="text/css" href="/style.css"/>
     </head>
-    <body>
+    <body class="theme-default">
       <div class="form-container">
-        <h1>FIN DE CORTE REGISTRO<h1>
-        <h1>Registro</h1>
-        <h2>Formulario de Registro para <h2> 
+        <h1>FIN DE CORTE REGISTRO</h1>
+        <h2>Registro</h2>
+        <h2>Formulario de Registro para</h2>
         <h1>Bloque ${bloque} ${etapa ? `- Etapa: ${etapa.charAt(0).toUpperCase() + etapa.slice(1)}` : ''}</h1>
+
         <form action="/submit" method="POST" id="registroForm">
-          
           <label for="bloque">Bloque:</label>
           <p style="font-size: 1.5em; padding: 10px;">${bloque}</p><br><br>
 
@@ -130,7 +154,7 @@ app.get('/', (req, res) => {
           <!-- Campos ocultos -->
           <input type="hidden" name="etapa" value="${etapa}" />
           <input type="hidden" name="bloque" value="${bloque}" />
-          <input type="hidden" name="tipo" value="fin_corte" /> <!-- <--- Puedes usar un nombre por defecto -->
+          <input type="hidden" name="tipo" value="fin_corte" />
 
           <input type="submit" value="Enviar">
         </form>
@@ -191,10 +215,10 @@ app.get('/', (req, res) => {
 });
 
 // ==================== RUTA POST ====================
-app.post('/submit', async (req, res) => {
+app.post('/submit', ipWhitelist, async (req, res) => {
   const { variedad, tamano, numero_tallos, etapa, bloque, tipo } = req.body;
 
-  const sanitizedBloque = bloque.replace(/[^0-9]/g, '');
+  const sanitizedBloque = (bloque || '').replace(/[^0-9]/g, '');
   const sanitizedNumeroTallos = parseInt(numero_tallos, 10);
   const fecha = new Date().toISOString().split('T')[0];
 
@@ -204,7 +228,7 @@ app.post('/submit', async (req, res) => {
     variedad,
     numero_tallos: sanitizedNumeroTallos,
     etapa: etapa || '',
-    tipo: tipo || '',          // <--- GUARDA EL TIPO (nacional o fin_corte)
+    tipo: tipo || '', // nacional o fin_corte
   };
 
   // Solo agregar tamaño si NO es nacional
@@ -212,19 +236,21 @@ app.post('/submit', async (req, res) => {
     data.tamaño = tamano;
   }
 
-  console.log(data); // Verifica que "tipo" salga en consola
+  console.log('[SUBMIT]', {
+    fromIp: getClientIp(req),
+    data
+  });
 
   try {
     await addRecord(data);
     res.send(`
-    <html lang="es">
-    <head><meta charset="UTF-8"><title>Registro exitoso</title></head>
-    <body style="font-family:sans-serif; text-align:center; margin-top:50px;">
-      <h1>✅ Datos guardados correctamente</h1>
-    </body>
-    </html>
-  `);
-
+      <html lang="es">
+      <head><meta charset="UTF-8"><title>Registro exitoso</title></head>
+      <body style="font-family:sans-serif; text-align:center; margin-top:50px;">
+        <h1>✅ Datos guardados correctamente</h1>
+      </body>
+      </html>
+    `);
   } catch (error) {
     console.error(error);
     res.status(500).send('Hubo un error al guardar los datos.');
@@ -235,6 +261,3 @@ app.post('/submit', async (req, res) => {
 app.listen(port, () => {
   console.log(`Servidor escuchando en http://localhost:${port}`);
 });
-
-
-
