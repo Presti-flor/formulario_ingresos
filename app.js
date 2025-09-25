@@ -13,7 +13,7 @@ app.use(bodyParser.json());
 // ====== IP Whitelist Setup ======
 app.set('trust proxy', true); // respeta X-Forwarded-For detrás de proxy/reverse proxy
 
-// Configura por entorno o usa fallback (separadas por coma)
+// Configura IPs permitidas por variable de entorno: ALLOWED_IPS="127.0.0.1,192.168.1.,10.0.0.5"
 const ALLOWED_IPS = (process.env.ALLOWED_IPS || '186.102.77.146,190.61.45.230,192.168.10.23,192.168.10.1')
   .split(',')
   .map(ip => ip.trim())
@@ -25,22 +25,15 @@ function getClientIp(req) {
         || req.ip
         || req.connection?.remoteAddress
         || '';
-  if (ip.startsWith('::ffff:')) ip = ip.slice(7); // ::ffff:1.2.3.4 -> 1.2.3.4
+  if (ip.startsWith('::ffff:')) ip = ip.replace('::ffff:', ''); // normaliza IPv6-mapeado
   if (ip === '::1') ip = '127.0.0.1';
   return ip;
 }
 
 function ipWhitelist(req, res, next) {
-  // En dev, si no hay lista, no bloquea (quita esta línea si quieres hard-lock siempre)
-  if (!ALLOWED_IPS.length) return next();
-
+  if (!ALLOWED_IPS.length) return next(); // en dev, si no configuras IPs, no bloquea
   const ip = getClientIp(req);
-  const ok = ALLOWED_IPS.some(allowed =>
-    ip === allowed || (allowed.endsWith('.') && ip.startsWith(allowed)) // prefijos tipo 192.168.10.
-  );
-
-  console.log('[WHITELIST]', { clientIp: ip, ok, ALLOWED_IPS });
-
+  const ok = ALLOWED_IPS.some(allowed => ip === allowed || (allowed.endsWith('.') && ip.startsWith(allowed)));
   if (!ok) {
     console.warn(`Bloqueado: IP ${ip} no permitida`);
     return res.status(403).send('Acceso denegado: IP no autorizada para enviar formularios.');
@@ -48,7 +41,7 @@ function ipWhitelist(req, res, next) {
   next();
 }
 
-// ====== Anti-cache para GETs del formulario y pantalla de éxito ======
+// ====== Anti-cache para vistas ======
 function noStore(req, res, next) {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.set('Pragma', 'no-cache');
@@ -232,7 +225,6 @@ app.get('/', noStore, (req, res) => {
           }
         };
 
-        // Validación y limpieza básica
         document.getElementById('registroForm').onsubmit = function(e) {
           var tamano = document.querySelector('input[name="tamano"]').value;
           var numeroTallos = document.querySelector('input[name="numero_tallos"]').value.trim();
@@ -247,7 +239,7 @@ app.get('/', noStore, (req, res) => {
           }
         }
 
-        // Si vuelve con el botón atrás (bfcache), resetea y limpia estilos
+        // Si vuelve con "Atrás" (bfcache), resetea y limpia selección visual
         window.addEventListener('pageshow', function (e) {
           if (e.persisted) {
             const f = document.getElementById('registroForm');
@@ -322,7 +314,7 @@ app.get('/exito', noStore, (req, res) => {
         </p>
       </div>
       <script>
-        // Evita re-navegar a una versión cacheada
+        // Evita re-navegar a una versión cacheada en algunos navegadores
         if (window.history && window.history.replaceState) {
           window.history.replaceState(null, document.title, window.location.href);
         }
