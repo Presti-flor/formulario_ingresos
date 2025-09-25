@@ -214,7 +214,54 @@ app.get('/', (req, res) => {
   `);
 });
 
-// ==================== RUTA POST ====================
+// ==================== NUEVA RUTA PARA ÉXITO ====================
+app.get('/success', (req, res) => {
+  res.send(`
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Registro Exitoso</title>
+      <style>
+        body { 
+          font-family: sans-serif; 
+          text-align: center; 
+          margin-top: 50px; 
+          background-color: #f4f4f4;
+        }
+        .container {
+          background: white;
+          padding: 2rem;
+          border-radius: 10px;
+          box-shadow: 0 0 10px rgba(0,0,0,0.1);
+          display: inline-block;
+          margin: 0 auto;
+        }
+        h1 { color: #4CAF50; }
+        a { 
+          display: inline-block;
+          margin-top: 1rem;
+          padding: 0.5rem 1rem;
+          background: #4CAF50;
+          color: white;
+          text-decoration: none;
+          border-radius: 5px;
+        }
+        a:hover { background: #45a049; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <h1>✅ Datos guardados correctamente</h1>
+        <p>El formulario se ha enviado con éxito.</p>
+        <a href="/">Volver al Escáner</a>
+      </div>
+    </body>
+    </html>
+  `);
+});
+
+// ==================== RUTA POST MODIFICADA (PRG Pattern) ====================
 app.post('/submit', ipWhitelist, async (req, res) => {
   const { variedad, tamano, numero_tallos, etapa, bloque, tipo } = req.body;
 
@@ -243,16 +290,11 @@ app.post('/submit', ipWhitelist, async (req, res) => {
 
   try {
     await addRecord(data);
-    res.send(`
-      <html lang="es">
-      <head><meta charset="UTF-8"><title>Registro exitoso</title></head>
-      <body style="font-family:sans-serif; text-align:center; margin-top:50px;">
-        <h1>✅ Datos guardados correctamente</h1>
-      </body>
-      </html>
-    `);
+    // *** Cambio crucial: Redirigir en lugar de enviar HTML directamente ***
+    res.redirect('/success');
   } catch (error) {
     console.error(error);
+    // En caso de error, NO redirigimos para mostrar el mensaje de error
     res.status(500).send('Hubo un error al guardar los datos.');
   }
 });
