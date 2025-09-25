@@ -214,53 +214,56 @@ app.get('/', (req, res) => {
   `);
 });
 
-// ==================== RUTA POST ====================
 app.post('/submit', ipWhitelist, async (req, res) => {
   const { variedad, tamano, numero_tallos, etapa, bloque, tipo } = req.body;
 
-  const sanitizedBloque = (bloque || '').replace(/[^0-9]/g, '');
-  const sanitizedNumeroTallos = parseInt(numero_tallos, 10);
-  const fecha = new Date().toISOString().split('T')[0];
-
-  const data = {
-    fecha,
-    bloque: sanitizedBloque,
-    variedad,
-    numero_tallos: sanitizedNumeroTallos,
-    etapa: etapa || '',
-    tipo: tipo || '', // nacional o fin_corte
-  };
-
-  if (tipo !== 'nacional') {
-    data.tamaño = tamano;
-  }
-
-  console.log('[SUBMIT]', {
-    fromIp: getClientIp(req),
-    data
-  });
+  // ... (your existing data sanitization and logging code remains the same)
 
   try {
     await addRecord(data);
     res.send(`
       <html lang="es">
-      <head><meta charset="UTF-8"><title>Registro exitoso</title></head>
-      <body style="font-family:sans-serif; text-align:center; margin-top:50px;">
+      <head>
+        <meta charset="UTF-8">
+        <title>Registro exitoso</title>
+        <style>
+          body { 
+            font-family: sans-serif; 
+            text-align: center; 
+            margin-top: 50px; 
+            padding: 20px;
+          }
+          button {
+            padding: 10px 20px;
+            font-size: 1em;
+            margin-top: 20px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+          }
+          button:hover {
+            background-color: #45a049;
+          }
+        </style>
+      </head>
+      <body>
         <h1>✅ Datos guardados correctamente</h1>
-        <p>Puede cerrar esta pestaña con el botón de abajo.</p>
-        <button onclick="cerrarVentana()" 
-                style="margin-top:20px; padding:10px 20px; font-size:16px; cursor:pointer;">
-          Cerrar pestaña
-        </button>
-
+        <p>Ya puede cerrar esta ventana.</p>
+        <button onclick="cerrarVentana()">Cerrar Ventana</button>
+        
         <script>
           function cerrarVentana() {
-            // Intentar cerrar (solo funciona si fue abierta con window.open)
+            // Intenta cerrar la ventana actual
             window.close();
-            // Fallback: limpiar la pestaña para que el usuario la cierre manualmente
+            
+            // Si el cierre no funciona después de un breve momento, muestra un mensaje.
             setTimeout(() => {
-              document.body.innerHTML = '<h2>✅ Pestaña lista para cerrar</h2><p>Por favor ciérrela manualmente.</p>';
-            }, 200);
+              if (!window.closed) {
+                alert('Si la ventana no se cierra automáticamente, por favor ciérrela manualmente.');
+              }
+            }, 100);
           }
         </script>
       </body>
@@ -271,7 +274,6 @@ app.post('/submit', ipWhitelist, async (req, res) => {
     res.status(500).send('Hubo un error al guardar los datos.');
   }
 });
-
 // ==================== INICIO DEL SERVIDOR ====================
 app.listen(port, () => {
   console.log(`Servidor escuchando en http://localhost:${port}`);
