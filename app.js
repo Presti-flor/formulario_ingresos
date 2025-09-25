@@ -10,8 +10,9 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
 // ====== IP Whitelist Setup ======
-app.set('trust proxy', true);
+app.set('trust proxy', true); // respeta X-Forwarded-For detrás de proxy/reverse proxy
 
+// Configura IPs permitidas por variable de entorno: ALLOWED_IPS="127.0.0.1,192.168.1.,10.0.0.5"
 const ALLOWED_IPS = (process.env.ALLOWED_IPS || '186.102.77.146,190.61.45.230,192.168.10.23,192.168.10.1')
   .split(',')
   .map(ip => ip.trim())
@@ -19,12 +20,12 @@ const ALLOWED_IPS = (process.env.ALLOWED_IPS || '186.102.77.146,190.61.45.230,19
 
 function getClientIp(req) {
   let ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || req.connection?.remoteAddress || '';
-  if (ip.startsWith('::ffff:')) ip = ip.replace('::ffff:', '');
+  if (ip.startsWith('::ffff:')) ip = ip.replace('::ffff:', ''); // normaliza IPv6-mapeado
   return ip;
 }
 
 function ipWhitelist(req, res, next) {
-  if (!ALLOWED_IPS.length) return next();
+  if (!ALLOWED_IPS.length) return next(); // en dev, si no configuras IPs, no bloquea
   const ip = getClientIp(req);
   const ok = ALLOWED_IPS.some(allowed => ip === allowed || (allowed.endsWith('.') && ip.startsWith(allowed)));
   if (!ok) {
@@ -34,35 +35,11 @@ function ipWhitelist(req, res, next) {
   next();
 }
 
-// ==================== PÁGINA PRINCIPAL ====================
+// ==================== RUTA PRINCIPAL ====================
 app.get('/', (req, res) => {
-  res.send(`
-    <html lang="es">
-    <head>
-      <meta charset="UTF-8"/>
-      <title>Inicio</title>
-    </head>
-    <body style="font-family:sans-serif; text-align:center; margin-top:50px;">
-      <h1>Formulario de Registro</h1>
-      <p>Abra el formulario en una ventana emergente para registrar tallos.</p>
-      <button onclick="abrirPopup()">Abrir Formulario</button>
-
-      <script>
-        function abrirPopup() {
-          window.open('/form?tipo=nacional&bloque=3', 'formulario',
-            'width=600,height=600,resizable=yes,scrollbars=yes');
-        }
-      </script>
-    </body>
-    </html>
-  `);
-});
-
-// ==================== FORMULARIO ====================
-app.get('/form', (req, res) => {
   const bloque = req.query.bloque || '3';
   const etapa = req.query.etapa || '';
-  const tipo = req.query.tipo || '';
+  const tipo = req.query.tipo || ''; // nacional | fin_corte (default)
 
   // ======= FORMULARIO TIPO NACIONAL =========
   if (tipo === 'nacional') {
@@ -85,65 +62,153 @@ app.get('/form', (req, res) => {
       <html lang="es">
       <head>
         <meta charset="UTF-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
         <title>Formulario Tallos Nacional</title>
+        <link rel="stylesheet" type="text/css" href="/style.css"/>
       </head>
-      <body style="font-family:sans-serif; margin:20px;">
-        <h1>REGISTRO NACIONAL</h1>
-        <h2>Bloque ${bloque} ${etapa ? `- Etapa: ${etapa}` : ''}</h2>
-        <form action="/submit" method="POST">
-          <label for="variedad">Variedad:</label>
-          <select name="variedad" required>
-            ${variedades.map(v => `<option value="${v.value}">${v.label}</option>`).join('')}
-          </select><br><br>
+      <body class="theme-nacional">
+        <div class="form-container">
+          <h1 class="title">REGISTRO NACIONAL</h1>
+          <h2 class="subtitle">Bloque ${bloque} ${etapa ? `- Etapa: ${etapa.charAt(0).toUpperCase() + etapa.slice(1)}` : ''}</h2>
+          <form action="/submit" method="POST">
+            <label for="bloque">Bloque:</label>
+            <p style="font-size: 1.5em; padding: 10px;">${bloque}</p><br><br>
 
-          <label for="numero_tallos">Número de tallos:</label>
-          <input type="number" name="numero_tallos" required><br><br>
+            <label for="variedad">Variedad:</label>
+            <select name="variedad" required>
+              ${variedades.map(v => `<option value="${v.value}">${v.label}</option>`).join('')}
+            </select><br><br>
 
-          <!-- Campos ocultos -->
-          <input type="hidden" name="bloque" value="${bloque}" />
-          <input type="hidden" name="etapa" value="${etapa}" />
-          <input type="hidden" name="tipo" value="nacional" />
+            <label for="numero_tallos">Número de tallos:</label>
+            <input type="number" name="numero_tallos" required><br><br>
 
-          <input type="submit" value="Enviar">
-        </form>
+            <!-- Campos ocultos -->
+            <input type="hidden" name="bloque" value="${bloque}" />
+            <input type="hidden" name="etapa" value="${etapa}" />
+            <input type="hidden" name="tipo" value="nacional" />
+
+            <input type="submit" value="Enviar">
+          </form>
+        </div>
       </body>
       </html>
     `);
   }
 
-  // ======= FORMULARIO FIN DE CORTE =========
+  // ======= FORMULARIO ORIGINAL (fin de corte) =========
+  let variedades = [];
+  let seleccionVariedad = 'momentum';
+
+  if (bloque === '3') {
+    variedades = [
+      { value: 'momentum', label: 'Momentum' },
+      { value: 'quick sand', label: 'Quick Sand' },
+      { value: 'pink floyd', label: 'Pink Floyd' },
+      { value: 'freedom', label: 'Freedom' },
+    ];
+  } else if (bloque === '4') {
+    variedades = [
+      { value: 'freedom', label: 'Freedom' },
+      { value: 'hilux', label: 'Hilux' },
+    ];
+    seleccionVariedad = 'freedom';
+  }
+
   res.send(`
     <html lang="es">
     <head>
       <meta charset="UTF-8"/>
-      <title>Formulario Fin de Corte</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+      <title>Formulario Fin de Corte / N° Tallos</title>
+      <link rel="stylesheet" type="text/css" href="/style.css"/>
     </head>
-    <body style="font-family:sans-serif; margin:20px;">
-      <h1>FIN DE CORTE - BLOQUE ${bloque}</h1>
-      <form action="/submit" method="POST" id="registroForm">
-        <label for="variedad">Variedad:</label>
-        <select name="variedad" required>
-          <option value="momentum">Momentum</option>
-          <option value="freedom">Freedom</option>
-        </select><br><br>
+    <body class="theme-default">
+      <div class="form-container">
+        <h1>FIN DE CORTE REGISTRO</h1>
+        <h2>Registro</h2>
+        <h2>Formulario de Registro para</h2>
+        <h1>Bloque ${bloque} ${etapa ? `- Etapa: ${etapa.charAt(0).toUpperCase() + etapa.slice(1)}` : ''}</h1>
 
-        <label for="tamano">Tamaño:</label>
-        <select name="tamano" required>
-          <option value="largo">Largo</option>
-          <option value="corto">Corto</option>
-          <option value="ruso">Ruso</option>
-        </select><br><br>
+        <form action="/submit" method="POST" id="registroForm">
+          <label for="bloque">Bloque:</label>
+          <p style="font-size: 1.5em; padding: 10px;">${bloque}</p><br><br>
 
-        <label for="numero_tallos">Número de tallos:</label>
-        <input type="number" name="numero_tallos" required><br><br>
+          <label for="variedad">Variedad:</label>
+          <select name="variedad" required id="variedadSelect" onchange="mostrarTamano()" value="${seleccionVariedad}">
+            ${variedades.map(variedad => `
+              <option value="${variedad.value}" ${seleccionVariedad === variedad.value ? 'selected' : ''}>${variedad.label}</option>
+            `).join('')}
+          </select><br><br>
 
-        <!-- Campos ocultos -->
-        <input type="hidden" name="bloque" value="${bloque}" />
-        <input type="hidden" name="etapa" value="${etapa}" />
-        <input type="hidden" name="tipo" value="fin_corte" />
+          <label for="tamano">Elija Tamaño:</label>
+          <div class="tamano-options" id="tamanoOptions">
+            <div class="tamano-option" id="largo" onclick="selectTamano('largo')">Largo</div>
+            <div class="tamano-option" id="corto" onclick="selectTamano('corto')">Corto</div>
+          </div><br><br>
 
-        <input type="submit" value="Enviar">
-      </form>
+          <input type="hidden" name="tamano" required />
+
+          <label for="numero_tallos">Número de tallos:</label>
+          <input type="number" name="numero_tallos" required><br><br>
+
+          <!-- Campos ocultos -->
+          <input type="hidden" name="etapa" value="${etapa}" />
+          <input type="hidden" name="bloque" value="${bloque}" />
+          <input type="hidden" name="tipo" value="fin_corte" />
+
+          <input type="submit" value="Enviar">
+        </form>
+      </div>
+
+      <script>
+        function selectTamano(tamano) {
+          document.getElementById('largo').classList.remove('selected');
+          document.getElementById('corto').classList.remove('selected');
+          document.getElementById('ruso')?.classList.remove('selected');
+          document.getElementById(tamano).classList.add('selected');
+          document.querySelector('input[name="tamano"]').value = tamano;
+        }
+
+        function mostrarTamano() {
+          var variedad = document.getElementById('variedadSelect').value;
+          var tamanoOptions = document.getElementById('tamanoOptions');
+          if (variedad === 'freedom') {
+            if (!document.getElementById('ruso')) {
+              var rusoOption = document.createElement('div');
+              rusoOption.classList.add('tamano-option');
+              rusoOption.id = 'ruso';
+              rusoOption.innerHTML = 'Ruso';
+              rusoOption.onclick = function() { selectTamano('ruso'); };
+              tamanoOptions.appendChild(rusoOption);
+            }
+          } else {
+            var rusoOption = document.getElementById('ruso');
+            if (rusoOption) rusoOption.remove();
+          }
+        }
+
+        window.onload = function() {
+          var variedad = document.getElementById('variedadSelect').value;
+          if (variedad === 'freedom') {
+            selectTamano('largo');
+            mostrarTamano();
+          }
+        };
+
+        document.getElementById('registroForm').onsubmit = function(e) {
+          var tamano = document.querySelector('input[name="tamano"]').value;
+          var numeroTallos = document.querySelector('input[name="numero_tallos"]').value.trim();
+          document.querySelector('input[name="numero_tallos"]').value = numeroTallos;
+          if (!tamano) {
+            e.preventDefault();
+            alert('Por favor seleccione el tamaño (Largo, Corto o Ruso si Freedom).');
+          }
+          if (!numeroTallos || isNaN(numeroTallos)) {
+            e.preventDefault();
+            alert('Por favor ingrese un número de tallos válido.');
+          }
+        }
+      </script>
     </body>
     </html>
   `);
@@ -163,7 +228,7 @@ app.post('/submit', ipWhitelist, async (req, res) => {
     variedad,
     numero_tallos: sanitizedNumeroTallos,
     etapa: etapa || '',
-    tipo: tipo || '',
+    tipo: tipo || '', // nacional o fin_corte
   };
 
   if (tipo !== 'nacional') {
@@ -182,10 +247,22 @@ app.post('/submit', ipWhitelist, async (req, res) => {
       <head><meta charset="UTF-8"><title>Registro exitoso</title></head>
       <body style="font-family:sans-serif; text-align:center; margin-top:50px;">
         <h1>✅ Datos guardados correctamente</h1>
-        <button onclick="window.close()" 
+        <p>Puede cerrar esta pestaña con el botón de abajo.</p>
+        <button onclick="cerrarVentana()" 
                 style="margin-top:20px; padding:10px 20px; font-size:16px; cursor:pointer;">
           Cerrar pestaña
         </button>
+
+        <script>
+          function cerrarVentana() {
+            // Intentar cerrar (solo funciona si fue abierta con window.open)
+            window.close();
+            // Fallback: limpiar la pestaña para que el usuario la cierre manualmente
+            setTimeout(() => {
+              document.body.innerHTML = '<h2>✅ Pestaña lista para cerrar</h2><p>Por favor ciérrela manualmente.</p>';
+            }, 200);
+          }
+        </script>
       </body>
       </html>
     `);
@@ -199,3 +276,4 @@ app.post('/submit', ipWhitelist, async (req, res) => {
 app.listen(port, () => {
   console.log(`Servidor escuchando en http://localhost:${port}`);
 });
+
