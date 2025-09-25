@@ -10,9 +10,8 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
 // ====== IP Whitelist Setup ======
-app.set('trust proxy', true); // respeta X-Forwarded-For detrás de proxy/reverse proxy
+app.set('trust proxy', true);
 
-// Configura IPs permitidas por variable de entorno: ALLOWED_IPS="127.0.0.1,192.168.1.,10.0.0.5"
 const ALLOWED_IPS = (process.env.ALLOWED_IPS || '186.102.77.146,190.61.45.230,192.168.10.23,192.168.10.1')
   .split(',')
   .map(ip => ip.trim())
@@ -20,12 +19,12 @@ const ALLOWED_IPS = (process.env.ALLOWED_IPS || '186.102.77.146,190.61.45.230,19
 
 function getClientIp(req) {
   let ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || req.connection?.remoteAddress || '';
-  if (ip.startsWith('::ffff:')) ip = ip.replace('::ffff:', ''); // normaliza IPv6-mapeado
+  if (ip.startsWith('::ffff:')) ip = ip.replace('::ffff:', '');
   return ip;
 }
 
 function ipWhitelist(req, res, next) {
-  if (!ALLOWED_IPS.length) return next(); // en dev, si no configuras IPs, no bloquea
+  if (!ALLOWED_IPS.length) return next();
   const ip = getClientIp(req);
   const ok = ALLOWED_IPS.some(allowed => ip === allowed || (allowed.endsWith('.') && ip.startsWith(allowed)));
   if (!ok) {
@@ -46,7 +45,77 @@ app.get('/', (req, res) => {
 
   const bloque = req.query.bloque || '3';
   const etapa = req.query.etapa || '';
-  const tipo = req.query.tipo || ''; // nacional | fin_corte (default)
+  const tipo = req.query.tipo || '';
+
+  // Verificar si los parámetros requeridos están presentes
+  if (!req.query.bloque) {
+    return res.send(`
+      <html lang="es">
+      <head>
+        <meta charset="UTF-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <title>Acceso no válido</title>
+        <style>
+          body { 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            margin: 50px auto; 
+            max-width: 600px;
+            padding: 20px;
+            background-color: #f5f5f5;
+          }
+          .error-container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+          }
+          .error-icon {
+            font-size: 4em;
+            color: #ff4444;
+            margin-bottom: 20px;
+          }
+          .btn {
+            display: inline-block;
+            background-color: #007BFF;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 1.1em;
+            margin: 10px;
+          }
+          .btn:hover {
+            background-color: #0056b3;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="error-container">
+          <div class="error-icon">❌</div>
+          <h1>Acceso no válido</h1>
+          <p>Para acceder al formulario debe escanear el código QR correspondiente.</p>
+          <p>El formulario no puede ser accedido directamente mediante URL.</p>
+          <br>
+          <p><strong>Por favor, escanee el QR nuevamente.</strong></p>
+        </div>
+        
+        <script>
+          // Limpiar cualquier parámetro de la URL
+          if (window.history.replaceState) {
+            window.history.replaceState(null, null, window.location.pathname);
+          }
+          
+          // Prevenir que el usuario pueda navegar atrás a esta página
+          window.history.pushState(null, null, window.location.href);
+          window.addEventListener('popstate', function() {
+            window.history.go(1);
+          });
+        </script>
+      </body>
+      </html>
+    `);
+  }
 
   // ======= FORMULARIO TIPO NACIONAL =========
   if (tipo === 'nacional') {
@@ -99,12 +168,15 @@ app.get('/', (req, res) => {
         </div>
         
         <script>
-          // Limpiar cualquier dato en caché al cargar la página
+          // Prevenir que el usuario pueda navegar atrás
+          window.history.pushState(null, null, window.location.href);
+          window.addEventListener('popstate', function() {
+            // Redirigir a página de acceso inválido si intentan retroceder
+            window.location.href = '/';
+          });
+
+          // Limpiar formulario al cargar
           window.onload = function() {
-            if (window.history.replaceState) {
-              window.history.replaceState(null, null, window.location.href);
-            }
-            // Limpiar formulario
             document.getElementById('nacionalForm').reset();
           };
         </script>
@@ -152,7 +224,7 @@ app.get('/', (req, res) => {
           <p style="font-size: 1.5em; padding: 10px;">${bloque}</p><br><br>
 
           <label for="variedad">Variedad:</label>
-          <select name="variedad" required id="variedadSelect" onchange="mostrarTamano()" value="${seleccionVariedad}">
+          <select name="variedad" required id="variedadSelect" onchange="mostrarTamano()">
             ${variedades.map(variedad => `
               <option value="${variedad.value}" ${seleccionVariedad === variedad.value ? 'selected' : ''}>${variedad.label}</option>
             `).join('')}
@@ -179,11 +251,15 @@ app.get('/', (req, res) => {
       </div>
 
       <script>
-        // Limpiar historial y formulario al cargar
+        // Prevenir que el usuario pueda navegar atrás al formulario
+        window.history.pushState(null, null, window.location.href);
+        window.addEventListener('popstate', function() {
+          // Redirigir a página de acceso inválido si intentan retroceder
+          window.location.href = '/';
+        });
+
+        // Limpiar formulario al cargar
         window.onload = function() {
-          if (window.history.replaceState) {
-            window.history.replaceState(null, null, window.location.href);
-          }
           resetForm();
         };
 
@@ -286,7 +362,7 @@ app.post('/submit', ipWhitelist, async (req, res) => {
     variedad,
     numero_tallos: sanitizedNumeroTallos,
     etapa: etapa || '',
-    tipo: tipo || '', // nacional o fin_corte
+    tipo: tipo || '',
   };
 
   // Solo agregar tamaño si NO es nacional
@@ -304,8 +380,73 @@ app.post('/submit', ipWhitelist, async (req, res) => {
 
   try {
     await addRecord(data);
-    // Redirigir a página de éxito en lugar de enviar HTML directamente
-    res.redirect(`/success?bloque=${encodeURIComponent(bloque)}&etapa=${encodeURIComponent(etapa)}&tipo=${encodeURIComponent(tipo)}`);
+    // Enviar página de éxito que cierra la ventana automáticamente
+    res.send(`
+      <html lang="es">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Registro Exitoso</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 50px auto;
+            max-width: 600px;
+            padding: 20px;
+            background-color: #f5f5f5;
+          }
+          .success-container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+          }
+          .success-icon {
+            font-size: 4em;
+            color: #4CAF50;
+            margin-bottom: 20px;
+          }
+          .success-message {
+            color: #4CAF50;
+            font-size: 1.5em;
+            margin-bottom: 30px;
+          }
+          .auto-close {
+            color: #666;
+            font-style: italic;
+            margin-top: 20px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="success-container">
+          <div class="success-icon">✅</div>
+          <div class="success-message">Datos guardados correctamente</div>
+          <p>Esta ventana se cerrará automáticamente en 3 segundos.</p>
+          <p class="auto-close">Por favor, escanee el QR nuevamente para un nuevo registro.</p>
+        </div>
+
+        <script>
+          // Prevenir navegación hacia atrás
+          window.history.pushState(null, null, window.location.href);
+          window.addEventListener('popstate', function() {
+            window.close();
+          });
+
+          // Cerrar ventana automáticamente después de 3 segundos
+          setTimeout(() => {
+            window.close();
+          }, 3000);
+
+          // También permitir cerrar con clic en cualquier parte
+          document.body.addEventListener('click', function() {
+            window.close();
+          });
+        </script>
+      </body>
+      </html>
+    `);
   } catch (error) {
     console.error(error);
     res.status(500).send(`
@@ -314,137 +455,30 @@ app.post('/submit', ipWhitelist, async (req, res) => {
       <body style="font-family:sans-serif; text-align:center; margin-top:50px;">
         <h1 style="color:red;">❌ Error al guardar los datos</h1>
         <p>Por favor intente nuevamente.</p>
-        <a href="/?bloque=${encodeURIComponent(bloque)}&etapa=${encodeURIComponent(etapa)}&tipo=${encodeURIComponent(tipo)}">Volver al formulario</a>
+        <button onclick="window.close()">Cerrar</button>
       </body>
       </html>
     `);
   }
 });
 
-// ==================== PÁGINA DE ÉXITO ====================
-app.get('/success', (req, res) => {
-  const { bloque, etapa, tipo } = req.query;
-  
+// ==================== RUTA PARA CERRAR VENTANA ====================
+app.get('/close', (req, res) => {
   res.send(`
-    <html lang="es">
+    <html>
     <head>
       <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Registro Exitoso</title>
-      <style>
-        body {
-          font-family: Arial, sans-serif;
-          text-align: center;
-          margin: 50px auto;
-          max-width: 600px;
-          padding: 20px;
-          background-color: #f5f5f5;
-        }
-        .success-container {
-          background: white;
-          padding: 40px;
-          border-radius: 10px;
-          box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .success-icon {
-          font-size: 4em;
-          color: #4CAF50;
-          margin-bottom: 20px;
-        }
-        .success-message {
-          color: #4CAF50;
-          font-size: 1.5em;
-          margin-bottom: 30px;
-        }
-        .link-container {
-          margin-top: 30px;
-        }
-        .btn {
-          display: inline-block;
-          background-color: #007BFF;
-          color: white;
-          padding: 12px 30px;
-          text-decoration: none;
-          border-radius: 5px;
-          font-size: 1.1em;
-          margin: 10px;
-          border: none;
-          cursor: pointer;
-        }
-        .btn:hover {
-          background-color: #0056b3;
-        }
-        .btn-secondary {
-          background-color: #6c757d;
-        }
-        .btn-secondary:hover {
-          background-color: #545b62;
-        }
-        .info {
-          background-color: #e7f3ff;
-          padding: 15px;
-          border-radius: 5px;
-          margin: 20px 0;
-          text-align: left;
-        }
-      </style>
+      <title>Cerrar</title>
+      <script>
+        window.close();
+      </script>
     </head>
     <body>
-      <div class="success-container">
-        <div class="success-icon">✅</div>
-        <div class="success-message">Datos guardados correctamente</div>
-        
-        <div class="info">
-          <strong>Información registrada:</strong><br>
-          • Bloque: ${bloque || 'No especificado'}<br>
-          • Etapa: ${etapa ? etapa.charAt(0).toUpperCase() + etapa.slice(1) : 'No especificada'}<br>
-          • Tipo: ${tipo === 'nacional' ? 'Nacional' : 'Fin de Corte'}
-        </div>
-        
-        <div class="link-container">
-          <a href="/?bloque=${encodeURIComponent(bloque)}&etapa=${encodeURIComponent(etapa)}&tipo=${encodeURIComponent(tipo)}" class="btn">
-            Nuevo Registro
-          </a>
-          <br>
-          <button onclick="closeWindow()" class="btn btn-secondary">
-            Cerrar Ventana
-          </button>
-        </div>
-      </div>
-
-      <script>
-        // Limpiar el historial del navegador para evitar reenvío
-        if (window.history.replaceState) {
-          window.history.replaceState(null, null, window.location.href);
-        }
-        
-        // Prevenir que el formulario se reenvíe al recargar
-        if (window.history && window.history.pushState) {
-          window.history.pushState(null, null, window.location.href);
-        }
-        
-        function closeWindow() {
-          window.close();
-        }
-        
-        // Redirección automática opcional después de 5 segundos
-        setTimeout(() => {
-          window.location.href = '/?bloque=${encodeURIComponent(bloque)}&etapa=${encodeURIComponent(etapa)}&tipo=${encodeURIComponent(tipo)}';
-        }, 5000);
-      </script>
+      <p>Si la ventana no se cierra automáticamente, por favor ciérrela manualmente.</p>
+      <button onclick="window.close()">Cerrar Ventana</button>
     </body>
     </html>
   `);
-});
-
-// ==================== RUTA PARA LIMPIAR CACHE ====================
-app.get('/clear', (req, res) => {
-  res.set({
-    'Cache-Control': 'no-store, no-cache, must-revalidate, private',
-    'Pragma': 'no-cache',
-    'Expires': '0'
-  });
-  res.redirect('/');
 });
 
 // ==================== MANEJO DE ERRORES 404 ====================
@@ -454,7 +488,8 @@ app.use((req, res) => {
     <head><meta charset="UTF-8"><title>Página no encontrada</title></head>
     <body style="font-family:sans-serif; text-align:center; margin-top:50px;">
       <h1>404 - Página no encontrada</h1>
-      <a href="/">Ir al formulario principal</a>
+      <p>Por favor, escanee el QR válido para acceder al formulario.</p>
+      <button onclick="window.close()">Cerrar Ventana</button>
     </body>
     </html>
   `);
