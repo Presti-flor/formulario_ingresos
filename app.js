@@ -10,9 +10,8 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
 // ====== IP Whitelist Setup ======
-app.set('trust proxy', true); // respeta X-Forwarded-For detrás de proxy/reverse proxy
+app.set('trust proxy', true);
 
-// Configura IPs permitidas por variable de entorno: ALLOWED_IPS="127.0.0.1,192.168.1.,10.0.0.5"
 const ALLOWED_IPS = (process.env.ALLOWED_IPS || '186.102.77.146,190.61.45.230,192.168.10.23,192.168.10.1')
   .split(',')
   .map(ip => ip.trim())
@@ -20,12 +19,12 @@ const ALLOWED_IPS = (process.env.ALLOWED_IPS || '186.102.77.146,190.61.45.230,19
 
 function getClientIp(req) {
   let ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || req.connection?.remoteAddress || '';
-  if (ip.startsWith('::ffff:')) ip = ip.replace('::ffff:', ''); // normaliza IPv6-mapeado
+  if (ip.startsWith('::ffff:')) ip = ip.replace('::ffff:', '');
   return ip;
 }
 
 function ipWhitelist(req, res, next) {
-  if (!ALLOWED_IPS.length) return next(); // en dev, si no configuras IPs, no bloquea
+  if (!ALLOWED_IPS.length) return next();
   const ip = getClientIp(req);
   const ok = ALLOWED_IPS.some(allowed => ip === allowed || (allowed.endsWith('.') && ip.startsWith(allowed)));
   if (!ok) {
@@ -39,9 +38,13 @@ function ipWhitelist(req, res, next) {
 app.get('/', (req, res) => {
   const bloque = req.query.bloque || '3';
   const etapa = req.query.etapa || '';
-  const tipo = req.query.tipo || ''; // nacional | fin_corte (default)
+  const tipo = req.query.tipo || '';
 
-  // ======= FORMULARIO TIPO NACIONAL =========
+  // HEADER para evitar cache del formulario
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
   if (tipo === 'nacional') {
     let variedades = [];
     if (bloque === '3') {
@@ -70,7 +73,7 @@ app.get('/', (req, res) => {
         <div class="form-container">
           <h1 class="title">REGISTRO NACIONAL</h1>
           <h2 class="subtitle">Bloque ${bloque} ${etapa ? `- Etapa: ${etapa.charAt(0).toUpperCase() + etapa.slice(1)}` : ''}</h2>
-          <form action="/submit" method="POST">
+          <form action="/submit" method="POST" id="mainForm">
             <label for="bloque">Bloque:</label>
             <p style="font-size: 1.5em; padding: 10px;">${bloque}</p><br><br>
 
@@ -82,7 +85,6 @@ app.get('/', (req, res) => {
             <label for="numero_tallos">Número de tallos:</label>
             <input type="number" name="numero_tallos" required><br><br>
 
-            <!-- Campos ocultos -->
             <input type="hidden" name="bloque" value="${bloque}" />
             <input type="hidden" name="etapa" value="${etapa}" />
             <input type="hidden" name="tipo" value="nacional" />
@@ -90,6 +92,13 @@ app.get('/', (req, res) => {
             <input type="submit" value="Enviar">
           </form>
         </div>
+        
+        <script>
+          // Limpiar formulario si se carga desde cache (al usar atrás)
+          if (performance.navigation.type === 2) {
+            document.getElementById('mainForm').reset();
+          }
+        </script>
       </body>
       </html>
     `);
@@ -151,7 +160,6 @@ app.get('/', (req, res) => {
           <label for="numero_tallos">Número de tallos:</label>
           <input type="number" name="numero_tallos" required><br><br>
 
-          <!-- Campos ocultos -->
           <input type="hidden" name="etapa" value="${etapa}" />
           <input type="hidden" name="bloque" value="${bloque}" />
           <input type="hidden" name="tipo" value="fin_corte" />
@@ -193,6 +201,16 @@ app.get('/', (req, res) => {
             selectTamano('largo');
             mostrarTamano();
           }
+          
+          // Limpiar formulario si se carga desde cache (al usar atrás)
+          if (performance.navigation.type === 2) {
+            document.getElementById('registroForm').reset();
+            // Resetear también la selección visual de tamaño
+            document.querySelectorAll('.tamano-option').forEach(opt => {
+              opt.classList.remove('selected');
+            });
+            document.querySelector('input[name="tamano"]').value = '';
+          }
         };
 
         document.getElementById('registroForm').onsubmit = function(e) {
@@ -214,54 +232,7 @@ app.get('/', (req, res) => {
   `);
 });
 
-// ==================== NUEVA RUTA PARA ÉXITO ====================
-app.get('/success', (req, res) => {
-  res.send(`
-    <html lang="es">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Registro Exitoso</title>
-      <style>
-        body { 
-          font-family: sans-serif; 
-          text-align: center; 
-          margin-top: 50px; 
-          background-color: #f4f4f4;
-        }
-        .container {
-          background: white;
-          padding: 2rem;
-          border-radius: 10px;
-          box-shadow: 0 0 10px rgba(0,0,0,0.1);
-          display: inline-block;
-          margin: 0 auto;
-        }
-        h1 { color: #4CAF50; }
-        a { 
-          display: inline-block;
-          margin-top: 1rem;
-          padding: 0.5rem 1rem;
-          background: #4CAF50;
-          color: white;
-          text-decoration: none;
-          border-radius: 5px;
-        }
-        a:hover { background: #45a049; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <h1>✅ Datos guardados correctamente</h1>
-        <p>El formulario se ha enviado con éxito.</p>
-        <a href="/">Volver al Escáner</a>
-      </div>
-    </body>
-    </html>
-  `);
-});
-
-// ==================== RUTA POST MODIFICADA (PRG Pattern) ====================
+// ==================== RUTA POST MODIFICADA ====================
 app.post('/submit', ipWhitelist, async (req, res) => {
   const { variedad, tamano, numero_tallos, etapa, bloque, tipo } = req.body;
 
@@ -275,10 +246,9 @@ app.post('/submit', ipWhitelist, async (req, res) => {
     variedad,
     numero_tallos: sanitizedNumeroTallos,
     etapa: etapa || '',
-    tipo: tipo || '', // nacional o fin_corte
+    tipo: tipo || '',
   };
 
-  // Solo agregar tamaño si NO es nacional
   if (tipo !== 'nacional') {
     data.tamaño = tamano;
   }
@@ -290,12 +260,139 @@ app.post('/submit', ipWhitelist, async (req, res) => {
 
   try {
     await addRecord(data);
-    // *** Cambio crucial: Redirigir en lugar de enviar HTML directamente ***
-    res.redirect('/success');
+    
+    // Página de éxito que se cierra automáticamente
+    res.send(`
+      <!DOCTYPE html>
+      <html lang="es">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Registro Exitoso</title>
+        <style>
+          body {
+            font-family: sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+          }
+          .success-container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 3rem;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+          }
+          h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+          }
+          p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+          }
+          .countdown {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 1rem 0;
+          }
+          .btn {
+            background: white;
+            color: #4CAF50;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.1rem;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+          }
+          .btn:hover {
+            background: #f0f0f0;
+            transform: translateY(-2px);
+          }
+          .btn-close {
+            background: #ff4757;
+            color: white;
+          }
+          .btn-close:hover {
+            background: #ff3742;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="success-container">
+          <h1>✅ REGISTRO EXITOSO</h1>
+          <p>Los datos se han guardado correctamente en el sistema.</p>
+          <div class="countdown" id="countdown">Cerrando en 5 segundos...</div>
+          
+          <div>
+            <button class="btn" onclick="window.close()">CERRAR PESTAÑA</button>
+            <button class="btn btn-close" onclick="closeWindow()">CERRAR NAVEGADOR</button>
+          </div>
+        </div>
+
+        <script>
+          let seconds = 5;
+          const countdownElement = document.getElementById('countdown');
+          
+          const countdown = setInterval(() => {
+            seconds--;
+            countdownElement.textContent = 'Cerrando en ' + seconds + ' segundos...';
+            
+            if (seconds <= 0) {
+              clearInterval(countdown);
+              closeWindow();
+            }
+          }, 1000);
+
+          function closeWindow() {
+            // Intentar cerrar la pestaña/ventana
+            if (window.history.length > 1) {
+              // Si hay historial, retroceder
+              window.history.go(-2); // Retrocede 2 páginas para saltar el formulario
+            } else {
+              // Si no hay historial, cerrar la ventana
+              window.close();
+            }
+            
+            // Forzar cierre después de 1 segundo si aún está abierto
+            setTimeout(() => {
+              window.close();
+            }, 1000);
+          }
+
+          // También cerrar con la tecla ESC
+          document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+              closeWindow();
+            }
+          });
+        </script>
+      </body>
+      </html>
+    `);
   } catch (error) {
     console.error(error);
-    // En caso de error, NO redirigimos para mostrar el mensaje de error
-    res.status(500).send('Hubo un error al guardar los datos.');
+    res.status(500).send(`
+      <html>
+      <head><style>body{font-family:sans-serif;text-align:center;margin-top:50px;color:red;}</style></head>
+      <body>
+        <h1>❌ Error al guardar los datos</h1>
+        <p>Hubo un error al guardar los datos. Por favor, inténtelo de nuevo.</p>
+        <button onclick="window.history.back()">Volver</button>
+      </body>
+      </html>
+    `);
   }
 });
 
