@@ -214,10 +214,32 @@ app.get('/', (req, res) => {
   `);
 });
 
+// ==================== RUTA POST ====================
 app.post('/submit', ipWhitelist, async (req, res) => {
   const { variedad, tamano, numero_tallos, etapa, bloque, tipo } = req.body;
 
-  // ... (your existing data sanitization and logging code remains the same)
+  const sanitizedBloque = (bloque || '').replace(/[^0-9]/g, '');
+  const sanitizedNumeroTallos = parseInt(numero_tallos, 10);
+  const fecha = new Date().toISOString().split('T')[0];
+
+  const data = {
+    fecha,
+    bloque: sanitizedBloque,
+    variedad,
+    numero_tallos: sanitizedNumeroTallos,
+    etapa: etapa || '',
+    tipo: tipo || '', // nacional o fin_corte
+  };
+
+  // Solo agregar tamaño si NO es nacional
+  if (tipo !== 'nacional') {
+    data.tamaño = tamano;
+  }
+
+  console.log('[SUBMIT]', {
+    fromIp: getClientIp(req),
+    data
+  });
 
   try {
     await addRecord(data);
@@ -225,57 +247,161 @@ app.post('/submit', ipWhitelist, async (req, res) => {
       <html lang="es">
       <head>
         <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Registro exitoso</title>
         <style>
           body { 
-            font-family: sans-serif; 
+            font-family: Arial, sans-serif; 
             text-align: center; 
-            margin-top: 50px; 
-            padding: 20px;
+            margin: 0;
+            padding: 50px 20px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+          }
+          .success-container {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 100%;
+          }
+          h1 {
+            color: #2ecc71;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+          }
+          p {
+            color: #555;
+            font-size: 1.2em;
+            margin-bottom: 30px;
+          }
+          .btn-container {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
           }
           button {
-            padding: 10px 20px;
-            font-size: 1em;
-            margin-top: 20px;
-            cursor: pointer;
-            background-color: #4CAF50;
-            color: white;
+            padding: 12px 30px;
+            font-size: 1.1em;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
           }
-          button:hover {
-            background-color: #45a049;
+          .btn-close {
+            background-color: #e74c3c;
+            color: white;
+          }
+          .btn-close:hover {
+            background-color: #c0392b;
+            transform: translateY(-2px);
+          }
+          .btn-new {
+            background-color: #3498db;
+            color: white;
+          }
+          .btn-new:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+          }
+          .success-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
           }
         </style>
       </head>
       <body>
-        <h1>✅ Datos guardados correctamente</h1>
-        <p>Ya puede cerrar esta ventana.</p>
-        <button onclick="cerrarVentana()">Cerrar Ventana</button>
+        <div class="success-container">
+          <div class="success-icon">✅</div>
+          <h1>¡Registro Exitoso!</h1>
+          <p>Los datos han sido guardados correctamente en el sistema.</p>
+          
+          <div class="btn-container">
+            <button class="btn-close" onclick="cerrarVentana()">Cerrar Ventana</button>
+            <button class="btn-new" onclick="nuevoRegistro()">Nuevo Registro</button>
+          </div>
+        </div>
         
         <script>
           function cerrarVentana() {
             // Intenta cerrar la ventana actual
-            window.close();
+            if (window.history.length > 1) {
+              // Si hay historial, retrocede
+              window.history.back();
+            } else {
+              // Si no hay historial, intenta cerrar la ventana
+              window.close();
+            }
             
-            // Si el cierre no funciona después de un breve momento, muestra un mensaje.
+            // Si el cierre no funciona después de un breve momento, muestra un mensaje
             setTimeout(() => {
               if (!window.closed) {
-                alert('Si la ventana no se cierra automáticamente, por favor ciérrela manualmente.');
+                alert('Para cerrar completamente, use el botón de cerrar de su navegador.');
               }
-            }, 100);
+            }, 500);
           }
+          
+          function nuevoRegistro() {
+            // Regresa a la página anterior (el formulario)
+            window.history.back();
+          }
+          
+          // Opcional: Cerrar automáticamente después de 30 segundos
+          setTimeout(() => {
+            document.querySelector('.btn-close').style.backgroundColor = '#f39c12';
+            document.querySelector('.btn-close').textContent = 'Cerrar Automáticamente (10s)';
+          }, 20000);
+          
+          setTimeout(() => {
+            if (confirm('¿Desea cerrar esta ventana?')) {
+              cerrarVentana();
+            }
+          }, 30000);
         </script>
       </body>
       </html>
     `);
   } catch (error) {
     console.error(error);
-    res.status(500).send('Hubo un error al guardar los datos.');
+    res.status(500).send(`
+      <html lang="es">
+      <head>
+        <meta charset="UTF-8">
+        <title>Error</title>
+        <style>
+          body { 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            padding: 50px;
+            background: #ffe6e6;
+          }
+          h1 { color: #c0392b; }
+          button { 
+            padding: 10px 20px; 
+            margin: 10px; 
+            cursor: pointer;
+          }
+        </style>
+      </head>
+      <body>
+        <h1>❌ Error al guardar los datos</h1>
+        <p>Hubo un problema al procesar su solicitud.</p>
+        <button onclick="window.history.back()">Volver al formulario</button>
+        <button onclick="window.location.reload()">Reintentar</button>
+      </body>
+      </html>
+    `);
   }
 });
+
 // ==================== INICIO DEL SERVIDOR ====================
 app.listen(port, () => {
   console.log(`Servidor escuchando en http://localhost:${port}`);
 });
-
