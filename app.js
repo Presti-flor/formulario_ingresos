@@ -1,9 +1,10 @@
+// app.js
 const express = require('express');
 const bodyParser = require('body-parser');
 const { addRecord } = require('./googleSheets');
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 app.use(express.static('public'));
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -19,8 +20,13 @@ const ALLOWED_IPS = (process.env.ALLOWED_IPS || '186.102.77.146,190.61.45.230,19
   .filter(Boolean);
 
 function getClientIp(req) {
-  let ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || req.connection?.remoteAddress || '';
+  let ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim()
+        || req.headers['x-real-ip']?.trim()
+        || req.ip
+        || req.connection?.remoteAddress
+        || '';
   if (ip.startsWith('::ffff:')) ip = ip.replace('::ffff:', ''); // normaliza IPv6-mapeado
+  if (ip === '::1') ip = '127.0.0.1';
   return ip;
 }
 
@@ -35,27 +41,97 @@ function ipWhitelist(req, res, next) {
   next();
 }
 
-// ==================== RUTA PRINCIPAL ====================
-app.get('/', (req, res) => {
-  const bloque = req.query.bloque || '3';
+// ====== Anti-cache ======
+function noStore(req, res, next) {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  res.set('Surrogate-Control', 'no-store');
+  next();
+}
+
+// ==================== RUTA PRINCIPAL (FORM) ====================
+app.get('/', noStore, (req, res) => {
+  const bloque = req.query.bloque;
   const etapa = req.query.etapa || '';
   const tipo = req.query.tipo || ''; // nacional | fin_corte (default)
+
+  // (Opcional) Exigir re-escanear QR cada visita si REQUIRE_QR=1
+  // El QR debe incluir ?qr=1&bloque=...&tipo=... (o al menos ?qr=1)
+  const requireQR = process.env.REQUIRE_QR === '1';
+  const qrOK = req.query.qr === '1';
+
+  if (requireQR && !qrOK) {
+    return res.send(`
+      <html lang="es">
+      <head>
+        <meta charset="UTF-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <title>Escanear QR</title>
+        <link rel="stylesheet" type="text/css" href="/style.css"/>
+        <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate"/>
+        <meta http-equiv="Pragma" content="no-cache"/>
+        <meta http-equiv="Expires" content="0"/>
+      </head>
+      <body class="theme-default">
+        <div class="form-container" style="text-align:center; padding:40px;">
+          <h1>🔒 Escanee el QR para abrir el formulario</h1>
+          <p>Para evitar reutilizar datos por el botón “Atrás”, el acceso requiere escaneo fresco del QR.</p>
+        </div>
+        <script>
+          // Si alguien vuelve con "Atrás" a esta pantalla, fuerza recarga
+          window.addEventListener('pageshow', function (e) {
+            if (e.persisted || (performance.getEntriesByType && performance.getEntriesByType('navigation')[0]?.type === 'back_forward')) {
+              location.reload();
+            }
+          });
+        </script>
+      </body>
+      </html>
+    `);
+  }
+
+  // Validación mínima: no auto-asignar bloque por defecto si exiges QR
+  const bloqueFinal = requireQR ? (bloque || '') : (bloque || '3');
 
   // ======= FORMULARIO TIPO NACIONAL =========
   if (tipo === 'nacional') {
     let variedades = [];
-    if (bloque === '3') {
+    if (bloqueFinal === '3') {
       variedades = [
         { value: 'momentum', label: 'Momentum' },
         { value: 'quick sand', label: 'Quick Sand' },
         { value: 'pink floyd', label: 'Pink Floyd' },
         { value: 'freedom', label: 'Freedom' },
       ];
-    } else if (bloque === '4') {
+    } else if (bloqueFinal === '4') {
       variedades = [
         { value: 'freedom', label: 'Freedom' },
         { value: 'hilux', label: 'Hilux' },
       ];
+    }
+
+    // Si no hay bloque (porque exigimos QR y no vino), muestra aviso
+    if (!bloqueFinal) {
+      return res.send(`
+        <html lang="es">
+        <head>
+          <meta charset="UTF-8"/>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+          <title>Falta parámetro</title>
+          <link rel="stylesheet" type="text/css" href="/style.css"/>
+          <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate"/>
+          <meta http-equiv="Pragma" content="no-cache"/>
+          <meta http-equiv="Expires" content="0"/>
+        </head>
+        <body class="theme-nacional">
+          <div class="form-container" style="text-align:center; padding:40px;">
+            <h1>⚠️ Falta el parámetro “bloque”</h1>
+            <p>Vuelva a escanear el QR.</p>
+          </div>
+        </body>
+        </html>
+      `);
     }
 
     return res.send(`
@@ -65,31 +141,44 @@ app.get('/', (req, res) => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
         <title>Formulario Tallos Nacional</title>
         <link rel="stylesheet" type="text/css" href="/style.css"/>
+        <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate"/>
+        <meta http-equiv="Pragma" content="no-cache"/>
+        <meta http-equiv="Expires" content="0"/>
       </head>
       <body class="theme-nacional">
         <div class="form-container">
           <h1 class="title">REGISTRO NACIONAL</h1>
-          <h2 class="subtitle">Bloque ${bloque} ${etapa ? `- Etapa: ${etapa.charAt(0).toUpperCase() + etapa.slice(1)}` : ''}</h2>
-          <form action="/submit" method="POST">
+          <h2 class="subtitle">Bloque ${bloqueFinal} ${etapa ? `- Etapa: ${etapa.charAt(0).toUpperCase() + etapa.slice(1)}` : ''}</h2>
+          <form action="/submit" method="POST" id="nacionalForm" autocomplete="off">
             <label for="bloque">Bloque:</label>
-            <p style="font-size: 1.5em; padding: 10px;">${bloque}</p><br><br>
+            <p style="font-size: 1.5em; padding: 10px;">${bloqueFinal}</p><br><br>
 
             <label for="variedad">Variedad:</label>
-            <select name="variedad" required>
+            <select name="variedad" required autocomplete="off">
               ${variedades.map(v => `<option value="${v.value}">${v.label}</option>`).join('')}
             </select><br><br>
 
             <label for="numero_tallos">Número de tallos:</label>
-            <input type="number" name="numero_tallos" required><br><br>
+            <input type="number" name="numero_tallos" required inputmode="numeric" autocomplete="off"><br><br>
 
             <!-- Campos ocultos -->
-            <input type="hidden" name="bloque" value="${bloque}" />
+            <input type="hidden" name="bloque" value="${bloqueFinal}" />
             <input type="hidden" name="etapa" value="${etapa}" />
             <input type="hidden" name="tipo" value="nacional" />
+            ${requireQR && qrOK ? `<input type="hidden" name="qr" value="1" />` : ''}
 
             <input type="submit" value="Enviar">
           </form>
         </div>
+
+        <script>
+          // Si vuelve con "Atrás" (bfcache), fuerza recarga
+          window.addEventListener('pageshow', function (e) {
+            if (e.persisted || (performance.getEntriesByType && performance.getEntriesByType('navigation')[0]?.type === 'back_forward')) {
+              location.reload();
+            }
+          });
+        </script>
       </body>
       </html>
     `);
@@ -99,19 +188,41 @@ app.get('/', (req, res) => {
   let variedades = [];
   let seleccionVariedad = 'momentum';
 
-  if (bloque === '3') {
+  if (bloqueFinal === '3') {
     variedades = [
       { value: 'momentum', label: 'Momentum' },
       { value: 'quick sand', label: 'Quick Sand' },
       { value: 'pink floyd', label: 'Pink Floyd' },
       { value: 'freedom', label: 'Freedom' },
     ];
-  } else if (bloque === '4') {
+  } else if (bloqueFinal === '4') {
     variedades = [
       { value: 'freedom', label: 'Freedom' },
       { value: 'hilux', label: 'Hilux' },
     ];
     seleccionVariedad = 'freedom';
+  }
+
+  if (requireQR && !bloqueFinal) {
+    return res.send(`
+      <html lang="es">
+      <head>
+        <meta charset="UTF-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <title>Falta parámetro</title>
+        <link rel="stylesheet" type="text/css" href="/style.css"/>
+        <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate"/>
+        <meta http-equiv="Pragma" content="no-cache"/>
+        <meta http-equiv="Expires" content="0"/>
+      </head>
+      <body class="theme-default">
+        <div class="form-container" style="text-align:center; padding:40px;">
+          <h1>⚠️ Falta el parámetro “bloque”</h1>
+          <p>Vuelva a escanear el QR.</p>
+        </div>
+      </body>
+      </html>
+    `);
   }
 
   res.send(`
@@ -121,20 +232,23 @@ app.get('/', (req, res) => {
       <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
       <title>Formulario Fin de Corte / N° Tallos</title>
       <link rel="stylesheet" type="text/css" href="/style.css"/>
+      <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate"/>
+      <meta http-equiv="Pragma" content="no-cache"/>
+      <meta http-equiv="Expires" content="0"/>
     </head>
     <body class="theme-default">
       <div class="form-container">
         <h1>FIN DE CORTE REGISTRO</h1>
         <h2>Registro</h2>
         <h2>Formulario de Registro para</h2>
-        <h1>Bloque ${bloque} ${etapa ? `- Etapa: ${etapa.charAt(0).toUpperCase() + etapa.slice(1)}` : ''}</h1>
+        <h1>Bloque ${bloqueFinal || '—'} ${etapa ? `- Etapa: ${etapa.charAt(0).toUpperCase() + etapa.slice(1)}` : ''}</h1>
 
-        <form action="/submit" method="POST" id="registroForm">
+        <form action="/submit" method="POST" id="registroForm" autocomplete="off">
           <label for="bloque">Bloque:</label>
-          <p style="font-size: 1.5em; padding: 10px;">${bloque}</p><br><br>
+          <p style="font-size: 1.5em; padding: 10px;">${bloqueFinal || '—'}</p><br><br>
 
           <label for="variedad">Variedad:</label>
-          <select name="variedad" required id="variedadSelect" onchange="mostrarTamano()" value="${seleccionVariedad}">
+          <select name="variedad" required id="variedadSelect" onchange="mostrarTamano()" value="${seleccionVariedad}" autocomplete="off">
             ${variedades.map(variedad => `
               <option value="${variedad.value}" ${seleccionVariedad === variedad.value ? 'selected' : ''}>${variedad.label}</option>
             `).join('')}
@@ -149,14 +263,15 @@ app.get('/', (req, res) => {
           <input type="hidden" name="tamano" required />
 
           <label for="numero_tallos">Número de tallos:</label>
-          <input type="number" name="numero_tallos" required><br><br>
+          <input type="number" name="numero_tallos" required inputmode="numeric" autocomplete="off"><br><br>
 
           <!-- Campos ocultos -->
           <input type="hidden" name="etapa" value="${etapa}" />
-          <input type="hidden" name="bloque" value="${bloque}" />
+          <input type="hidden" name="bloque" value="${bloqueFinal || ''}" />
           <input type="hidden" name="tipo" value="fin_corte" />
+          ${requireQR && qrOK ? `<input type="hidden" name="qr" value="1" />` : ''}
 
-          <input type="submit" value="Enviar">
+          <input type="submit" value="Enviar" ${requireQR && !bloqueFinal ? 'disabled' : ''}>
         </form>
       </div>
 
@@ -187,14 +302,16 @@ app.get('/', (req, res) => {
           }
         }
 
+        // Default UI si la variedad es freedom
         window.onload = function() {
-          var variedad = document.getElementById('variedadSelect').value;
+          var variedad = document.getElementById('variedadSelect')?.value;
           if (variedad === 'freedom') {
             selectTamano('largo');
             mostrarTamano();
           }
         };
 
+        // Validación + limpieza básica
         document.getElementById('registroForm').onsubmit = function(e) {
           var tamano = document.querySelector('input[name="tamano"]').value;
           var numeroTallos = document.querySelector('input[name="numero_tallos"]').value.trim();
@@ -208,6 +325,13 @@ app.get('/', (req, res) => {
             alert('Por favor ingrese un número de tallos válido.');
           }
         }
+
+        // Si vuelve con "Atrás" (bfcache o back_forward), fuerza recarga => formulario limpio
+        window.addEventListener('pageshow', function (e) {
+          if (e.persisted || (performance.getEntriesByType && performance.getEntriesByType('navigation')[0]?.type === 'back_forward')) {
+            location.reload();
+          }
+        });
       </script>
     </body>
     </html>
@@ -216,11 +340,16 @@ app.get('/', (req, res) => {
 
 // ==================== RUTA POST ====================
 app.post('/submit', ipWhitelist, async (req, res) => {
-  const { variedad, tamano, numero_tallos, etapa, bloque, tipo } = req.body;
+  const { variedad, tamano, numero_tallos, etapa, bloque, tipo, qr } = req.body;
 
   const sanitizedBloque = (bloque || '').replace(/[^0-9]/g, '');
   const sanitizedNumeroTallos = parseInt(numero_tallos, 10);
   const fecha = new Date().toISOString().split('T')[0];
+
+  // (Opcional) Si exiges QR, verifica que venga la marca
+  if (process.env.REQUIRE_QR === '1' && qr !== '1') {
+    return res.status(400).send('Acceso inválido: re-escanee el QR.');
+  }
 
   const data = {
     fecha,
@@ -243,25 +372,51 @@ app.post('/submit', ipWhitelist, async (req, res) => {
 
   try {
     await addRecord(data);
-    res.send(`
-      <html lang="es">
-      <head><meta charset="UTF-8"><title>Registro exitoso</title></head>
-      <body style="font-family:sans-serif; text-align:center; margin-top:50px;">
-        <h1>✅ Datos guardados correctamente</h1>
-      </body>
-      </html>
-    `);
+    // PRG: Post -> Redirect (303) -> Get (pantalla de éxito)
+    return res.redirect(303, `/exito?tipo=${encodeURIComponent(tipo || '')}`);
   } catch (error) {
     console.error(error);
-    res.status(500).send('Hubo un error al guardar los datos.');
+    return res.status(500).send('Hubo un error al guardar los datos.');
   }
+});
+
+// ==================== RUTA DE ÉXITO ====================
+app.get('/exito', noStore, (req, res) => {
+  const tipo = req.query.tipo || '';
+  res.send(`
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+      <title>Registro exitoso</title>
+      <link rel="stylesheet" type="text/css" href="/style.css"/>
+      <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate"/>
+      <meta http-equiv="Pragma" content="no-cache"/>
+      <meta http-equiv="Expires" content="0"/>
+    </head>
+    <body class="${tipo === 'nacional' ? 'theme-nacional' : 'theme-default'}">
+      <div class="form-container" style="text-align:center; padding:40px;">
+        <h1>✅ Datos guardados correctamente</h1>
+        <p>Tu registro de <strong>${tipo || 'fin_corte'}</strong> fue procesado.</p>
+        <p style="margin-top:24px;">
+          <button onclick="window.close()" style="padding:12px 16px; border-radius:10px; border:none; cursor:pointer;">Cerrar esta pestaña</button>
+        </p>
+        <p style="opacity:.8; margin-top:10px;">Si el navegador no permite cerrar automáticamente, puedes cerrar manualmente.</p>
+      </div>
+      <script>
+        // Evita volver a una versión cacheada con "Atrás"
+        window.addEventListener('pageshow', function (e) {
+          if (e.persisted || (performance.getEntriesByType && performance.getEntriesByType('navigation')[0]?.type === 'back_forward')) {
+            location.reload();
+          }
+        });
+      </script>
+    </body>
+    </html>
+  `);
 });
 
 // ==================== INICIO DEL SERVIDOR ====================
 app.listen(port, () => {
   console.log(`Servidor escuchando en http://localhost:${port}`);
 });
-
-///con este codigo que ya funciona necesito que el enviar el formulario se refresque o nose ya que lo envio sale el mensaje de enviado
-// correctamente pero si me regreso vuelve a salir el formulario ya lleno con los datos que envie , entonces necesito que ,
-// si me regreso no salga el formmulario o salga otra cosa o no salga con datos ya llenos 
