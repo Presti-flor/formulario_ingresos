@@ -248,6 +248,10 @@ app.post('/submit', ipWhitelist, async (req, res) => {
       <head><meta charset="UTF-8"><title>Registro exitoso</title></head>
       <body style="font-family:sans-serif; text-align:center; margin-top:50px;">
         <h1>✅ Datos guardados correctamente</h1>
+        <button onclick="window.close()" 
+                style="margin-top:20px; padding:10px 20px; font-size:16px; cursor:pointer;">
+          Cerrar pestaña
+        </button>
       </body>
       </html>
     `);
@@ -261,4 +265,3 @@ app.post('/submit', ipWhitelist, async (req, res) => {
 app.listen(port, () => {
   console.log(`Servidor escuchando en http://localhost:${port}`);
 });
-
