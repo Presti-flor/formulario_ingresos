@@ -13,7 +13,7 @@ app.use(bodyParser.json());
 app.set('trust proxy', true); // respeta X-Forwarded-For detrás de proxy/reverse proxy
 
 // Configura IPs permitidas por variable de entorno: ALLOWED_IPS="127.0.0.1,192.168.1.,10.0.0.5"
-const ALLOWED_IPS = (process.env.ALLOWED_IPS || '186.102.77.146,190.61.45.230,192.168.10.23,192.168.10.1,186.102.62.30')
+const ALLOWED_IPS = (process.env.ALLOWED_IPS || '186.102.86.56,186.102.77.146,190.61.45.230,192.168.10.23,192.168.10.1,186.102.62.30,186.102.55.56')
   .split(',')
   .map(ip => ip.trim())
   .filter(Boolean);
