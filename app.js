@@ -112,12 +112,7 @@ app.get('/', (req, res) => {
       { value: 'hilux', label: 'Hilux' },
     ];
     seleccionVariedad = 'freedom';
-    
-  } if (bloque === '5') {
-      variedades = [
-    { value: 'freedom', label: 'Freedom' },
-    ];
-    seleccionVariedad = 'freedom';
+  }
 
   res.send(`
     <html lang="es">
