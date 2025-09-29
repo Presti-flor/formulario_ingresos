@@ -112,7 +112,13 @@ app.get('/', (req, res) => {
       { value: 'hilux', label: 'Hilux' },
     ];
     seleccionVariedad = 'freedom';
-  }
+    
+  } else if (bloque === '5') {
+      variedades = [
+    { value: 'freedom', label: 'Freedom' },
+    { value: 'hilux', label: 'Hilux'}
+    ];
+    seleccionVariedad = 'freedom';
 
   res.send(`
     <html lang="es">
