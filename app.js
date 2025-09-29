@@ -56,6 +56,12 @@ app.get('/', (req, res) => {
         { value: 'freedom', label: 'Freedom' },
         { value: 'hilux', label: 'Hilux' },
       ];
+      seleccionVariedad = 'freedom';
+  } else if (bloque === '5'|| bloque === '6') {
+    variedades = [
+      {value: 'freedom', label:'Freedom'},
+    ];
+    seleccionVariedad = 'freedom';
     }
 
     return res.send(`
