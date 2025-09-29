@@ -113,10 +113,9 @@ app.get('/', (req, res) => {
     ];
     seleccionVariedad = 'freedom';
     
-  } else if (bloque === '5') {
+  } if (bloque === '5') {
       variedades = [
     { value: 'freedom', label: 'Freedom' },
-    { value: 'hilux', label: 'Hilux'}
     ];
     seleccionVariedad = 'freedom';
 
