@@ -96,33 +96,28 @@ app.get('/', (req, res) => {
   }
 
   // ======= FORMULARIO ORIGINAL (fin de corte) =========
-let variedades = [];
-let seleccionVariedad = 'momentum';
+  let variedades = [];
+  let seleccionVariedad = 'momentum';
 
-if (bloque === '3') {
-  variedades = [
-    { value: 'momentum', label: 'Momentum' },
-    { value: 'quick sand', label: 'Quick Sand' },
-    { value: 'pink floyd', label: 'Pink Floyd' },
-    { value: 'freedom', label: 'Freedom' },
-  ];
-} else if (bloque === '4') {
-  variedades = [
-    { value: 'freedom', label: 'Freedom' },
-    { value: 'hilux', label: 'Hilux' },
-  ];
-  seleccionVariedad = 'freedom';
-} else if (bloque === '5') {
-  variedades = [
-    { value: 'freedom', label: 'Freedom' },
-  ];
-  seleccionVariedad = 'freedom';
-} else if (bloque === '6') {
-  variedades = [
-    { value: 'freedom', label: 'Freedom' },
-  ];
-  seleccionVariedad = 'freedom';
-}
+  if (bloque === '3') {
+    variedades = [
+      { value: 'momentum', label: 'Momentum' },
+      { value: 'quick sand', label: 'Quick Sand' },
+      { value: 'pink floyd', label: 'Pink Floyd' },
+      { value: 'freedom', label: 'Freedom' },
+    ];
+  } else if (bloque === '4') {
+    variedades = [
+      { value: 'freedom', label: 'Freedom' },
+      { value: 'hilux', label: 'Hilux' },
+    ];
+    seleccionVariedad = 'freedom';
+  } else if (bloque === '5'|| bloque === '6') {
+    variedades = [
+      {value: 'freedom', label:'Freedom'},
+    ];
+    seleccionVariedad = 'freedom';
+  }
 
   res.send(`
     <html lang="es">
