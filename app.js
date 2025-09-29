@@ -61,8 +61,8 @@ app.get('/', (req, res) => {
     variedades = [
       {value: 'freedom', label:'Freedom'},
     ];
-    seleccionVariedad = 'freedom';
-    }
+    seleccionVariedad = 'freedom'
+  }
 
     return res.send(`
       <html lang="es">
@@ -122,7 +122,7 @@ app.get('/', (req, res) => {
     variedades = [
       {value: 'freedom', label:'Freedom'},
     ];
-    seleccionVariedad = 'freedom';
+    seleccionVariedad = 'freedom'
   }
 
   res.send(`
