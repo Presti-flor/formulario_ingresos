@@ -10,9 +10,9 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
 // ====== IP Whitelist Setup ======
-app.set('trust proxy', true); // respeta X-Forwarded-For detrás de proxy/reverse proxy
+app.set('trust proxy', true);
 
-// Configura IPs permitidas por variable de entorno: ALLOWED_IPS="127.0.0.1,192.168.1.,10.0.0.5"
+// Configura IPs permitidas por variable de entorno
 const ALLOWED_IPS = (process.env.ALLOWED_IPS || '186.102.35.116,186.102.83.175,186.102.86.56,186.102.77.146,190.61.45.230,192.168.10.23,192.168.10.1,186.102.62.30,186.102.55.56')
   .split(',')
   .map(ip => ip.trim())
@@ -20,12 +20,12 @@ const ALLOWED_IPS = (process.env.ALLOWED_IPS || '186.102.35.116,186.102.83.175,1
 
 function getClientIp(req) {
   let ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || req.connection?.remoteAddress || '';
-  if (ip.startsWith('::ffff:')) ip = ip.replace('::ffff:', ''); // normaliza IPv6-mapeado
+  if (ip.startsWith('::ffff:')) ip = ip.replace('::ffff:', '');
   return ip;
 }
 
 function ipWhitelist(req, res, next) {
-  if (!ALLOWED_IPS.length) return next(); // en dev, si no configuras IPs, no bloquea
+  if (!ALLOWED_IPS.length) return next();
   const ip = getClientIp(req);
   const ok = ALLOWED_IPS.some(allowed => ip === allowed || (allowed.endsWith('.') && ip.startsWith(allowed)));
   if (!ok) {
@@ -35,13 +35,27 @@ function ipWhitelist(req, res, next) {
   next();
 }
 
+/** ================== Reglas de tamaño (back y front deben coincidir) ================== */
+function allowedSizes(variedad, bloque) {
+  const v = (variedad || '').toLowerCase().trim();
+  const b = String(bloque || '').trim();
+  if (v === 'freedom') return ['largo', 'corto', 'ruso'];
+  if (v === 'vendela' && b === '1') return ['ruso'];
+  return []; // en cualquier otro caso, sin tamaño
+}
+
+function isSizeAllowed(variedad, bloque, tamano) {
+  const t = (tamano || '').toLowerCase().trim();
+  return allowedSizes(variedad, bloque).includes(t);
+}
+
 // ==================== RUTA PRINCIPAL ====================
 app.get('/', (req, res) => {
   const bloque = req.query.bloque || '3';
   const etapa = req.query.etapa || '';
-  const tipo = req.query.tipo || ''; // nacional | fin_corte (default)
+  const tipo = req.query.tipo || '';
 
-  // ======= FORMULARIO TIPO NACIONAL =========
+  // ======= FORMULARIO TIPO NACIONAL (nunca pide tamaño) =========
   if (tipo === 'nacional') {
     let variedades = [];
     if (bloque === '3') {
@@ -56,10 +70,8 @@ app.get('/', (req, res) => {
         { value: 'freedom', label: 'Freedom' },
         { value: 'hilux', label: 'Hilux' },
       ];
-    } else if (bloque === '5'|| bloque === '6') {
-      variedades = [
-        { value: 'freedom', label: 'Freedom' },
-      ];
+    } else if (bloque === '5' || bloque === '6') {
+      variedades = [{ value: 'freedom', label: 'Freedom' }];
     } else if (bloque === '7') {
       variedades = [
         { value: 'candlelight', label: 'Candlelight' },
@@ -108,7 +120,6 @@ app.get('/', (req, res) => {
             <label for="numero_tallos">Número de tallos:</label>
             <input type="number" name="numero_tallos" required><br><br>
 
-            <!-- Campos ocultos -->
             <input type="hidden" name="bloque" value="${bloque}" />
             <input type="hidden" name="etapa" value="${etapa}" />
             <input type="hidden" name="tipo" value="nacional" />
@@ -121,7 +132,7 @@ app.get('/', (req, res) => {
     `);
   }
 
-  // ======= FORMULARIO ORIGINAL (fin de corte) =========
+  // ======= FORMULARIO FIN DE CORTE =========
   let variedades = [];
   let seleccionVariedad = 'momentum';
 
@@ -138,37 +149,35 @@ app.get('/', (req, res) => {
       { value: 'hilux', label: 'Hilux' },
     ];
     seleccionVariedad = 'freedom';
-  } else if (bloque === '5'|| bloque === '6') {
-    variedades = [
-      {value: 'freedom', label:'Freedom'},
-    ];
+  } else if (bloque === '5' || bloque === '6') {
+    variedades = [{ value: 'freedom', label: 'Freedom' }];
     seleccionVariedad = 'freedom';
   } else if (bloque === '7') {
     variedades = [
-      {value: 'candleligt', label:'Candlelight'},
-      {value: 'deep purple', label:'Deep Purple'},
+      { value: 'candlelight', label: 'Candlelight' },
+      { value: 'deep purple', label: 'Deep Purple' },
     ];
     seleccionVariedad = 'candlelight';
   } else if (bloque === '8') {
     variedades = [
-      {value: 'star platinum', label:'Star Platinum'},
-      {value: 'candlelight', label:'Candlelight'},
-      {value: 'sommersand', label:'Sommersand'},
-      {value: 'freedom', label:'Freedom'},
+      { value: 'star platinum', label: 'Star Platinum' },
+      { value: 'candlelight', label: 'Candlelight' },
+      { value: 'sommersand', label: 'Sommersand' },
+      { value: 'freedom', label: 'Freedom' },
     ];
     seleccionVariedad = 'star platinum';
   } else if (bloque === '1') {
     variedades = [
-      {value: 'vendela', label:'Vendela'},
-      {value: 'pink floyd', label:'Pink Floyd'},
+      { value: 'vendela', label: 'Vendela' },
+      { value: 'pink floyd', label: 'Pink Floyd' },
     ];
     seleccionVariedad = 'vendela';
   } else if (bloque === '2') {
     variedades = [
-      {value: 'coral reff', label:'Coral Reff'},
-      {value: 'hummer', label:'Hummer'},
+      { value: 'coral reff', label: 'Coral Reff' },
+      { value: 'hummer', label: 'Hummer' },
     ];
-    seleccionVariedad = 'coral reff'
+    seleccionVariedad = 'coral reff';
   }
 
   res.send(`
@@ -178,37 +187,40 @@ app.get('/', (req, res) => {
       <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
       <title>Formulario Fin de Corte / N° Tallos</title>
       <link rel="stylesheet" type="text/css" href="/style.css"/>
+      <style>
+        .tamano-options { display:flex; gap:8px; }
+        .tamano-option { padding:8px 12px; border:1px solid #999; border-radius:6px; cursor:pointer; user-select:none; }
+        .tamano-option.selected { border-color:#007bff; box-shadow:0 0 0 2px rgba(0,123,255,.2); }
+        .hidden { display:none !important; }
+      </style>
     </head>
     <body class="theme-default">
       <div class="form-container">
         <h1>FIN DE CORTE REGISTRO</h1>
-        <h2>Registro</h2>
-        <h2>Formulario de Registro para</h2>
-        <h1>Bloque ${bloque} ${etapa ? `- Etapa: ${etapa.charAt(0).toUpperCase() + etapa.slice(1)}` : ''}</h1>
+        <h2>Bloque ${bloque} ${etapa ? `- Etapa: ${etapa.charAt(0).toUpperCase() + etapa.slice(1)}` : ''}</h2>
 
         <form action="/submit" method="POST" id="registroForm">
           <label for="bloque">Bloque:</label>
           <p style="font-size: 1.5em; padding: 10px;">${bloque}</p><br><br>
 
           <label for="variedad">Variedad:</label>
-          <select name="variedad" required id="variedadSelect" onchange="mostrarTamano()" value="${seleccionVariedad}">
+          <select name="variedad" required id="variedadSelect">
             ${variedades.map(variedad => `
               <option value="${variedad.value}" ${seleccionVariedad === variedad.value ? 'selected' : ''}>${variedad.label}</option>
             `).join('')}
           </select><br><br>
 
-          <label for="tamano">Elija Tamaño:</label>
-          <div class="tamano-options" id="tamanoOptions">
-            <div class="tamano-option" id="largo" onclick="selectTamano('largo')">Largo</div>
-            <div class="tamano-option" id="corto" onclick="selectTamano('corto')">Corto</div>
-          </div><br><br>
-
-          <input type="hidden" name="tamano" required />
+          <!-- Sección tamaño: aparece SOLO si la combinación lo permite -->
+          <div id="tamanoSection" class="hidden">
+            <label for="tamano">Elija Tamaño:</label>
+            <div class="tamano-options" id="tamanoOptions"></div>
+            <input type="hidden" name="tamano" />
+            <br><br>
+          </div>
 
           <label for="numero_tallos">Número de tallos:</label>
           <input type="number" name="numero_tallos" required><br><br>
 
-          <!-- Campos ocultos -->
           <input type="hidden" name="etapa" value="${etapa}" />
           <input type="hidden" name="bloque" value="${bloque}" />
           <input type="hidden" name="tipo" value="fin_corte" />
@@ -218,51 +230,75 @@ app.get('/', (req, res) => {
       </div>
 
       <script>
-        function selectTamano(tamano) {
-          document.getElementById('largo').classList.remove('selected');
-          document.getElementById('corto').classList.remove('selected');
-          document.getElementById('ruso')?.classList.remove('selected');
-          document.getElementById(tamano).classList.add('selected');
-          document.querySelector('input[name="tamano"]').value = tamano;
+        function allowedSizes(variedad, bloque){
+          const v = (variedad || '').toLowerCase().trim();
+          const b = String(bloque || '').trim();
+          if (v === 'freedom') return ['largo','corto','ruso'];
+          if (v === 'vendela' && b === '1') return ['ruso'];
+          return [];
         }
 
-        function mostrarTamano() {
-          var variedad = document.getElementById('variedadSelect').value;
-          var tamanoOptions = document.getElementById('tamanoOptions');
-          if (variedad === 'freedom') {
-            if (!document.getElementById('ruso')) {
-              var rusoOption = document.createElement('div');
-              rusoOption.classList.add('tamano-option');
-              rusoOption.id = 'ruso';
-              rusoOption.innerHTML = 'Ruso';
-              rusoOption.onclick = function() { selectTamano('ruso'); };
-              tamanoOptions.appendChild(rusoOption);
-            }
-          } else {
-            var rusoOption = document.getElementById('ruso');
-            if (rusoOption) rusoOption.remove();
+        function renderSizeOptions(){
+          const variedad = document.getElementById('variedadSelect').value;
+          const bloque = '${bloque}';
+          const opts = allowedSizes(variedad, bloque);
+
+          const section = document.getElementById('tamanoSection');
+          const container = document.getElementById('tamanoOptions');
+          const hiddenInput = document.querySelector('input[name="tamano"]');
+
+          container.innerHTML = '';
+          hiddenInput.value = '';
+
+          if (opts.length === 0){
+            section.classList.add('hidden');
+            return;
           }
+
+          section.classList.remove('hidden');
+          opts.forEach(t => {
+            const div = document.createElement('div');
+            div.className = 'tamano-option';
+            div.id = 'opt-' + t;
+            div.textContent = t.charAt(0).toUpperCase() + t.slice(1);
+            div.onclick = function(){
+              document.querySelectorAll('.tamano-option').forEach(x => x.classList.remove('selected'));
+              div.classList.add('selected');
+              hiddenInput.value = t;
+            };
+            container.appendChild(div);
+          });
+
+          // Selección por defecto
+          const first = container.querySelector('.tamano-option');
+          if (first){ first.click(); }
         }
 
-        window.onload = function() {
-          var variedad = document.getElementById('variedadSelect').value;
-          if (variedad === 'freedom') {
-            selectTamano('largo');
-            mostrarTamano();
-          }
+        document.getElementById('variedadSelect').addEventListener('change', renderSizeOptions);
+
+        window.onload = function(){
+          renderSizeOptions();
         };
 
         document.getElementById('registroForm').onsubmit = function(e) {
-          var tamano = document.querySelector('input[name="tamano"]').value;
-          var numeroTallos = document.querySelector('input[name="numero_tallos"]').value.trim();
-          document.querySelector('input[name="numero_tallos"]').value = numeroTallos;
-          if (!tamano) {
-            e.preventDefault();
-            alert('Por favor seleccione el tamaño (Largo, Corto o Ruso si Freedom).');
-          }
-          if (!numeroTallos || isNaN(numeroTallos)) {
+          const numeroInput = document.querySelector('input[name="numero_tallos"]');
+          const numeroTallos = String(numeroInput.value || '').trim();
+          numeroInput.value = numeroTallos;
+
+          if (!numeroTallos || isNaN(Number(numeroTallos))) {
             e.preventDefault();
             alert('Por favor ingrese un número de tallos válido.');
+            return false;
+          }
+
+          const tamanoSectionVisible = !document.getElementById('tamanoSection').classList.contains('hidden');
+          if (tamanoSectionVisible){
+            const tamano = document.querySelector('input[name="tamano"]').value;
+            if (!tamano){
+              e.preventDefault();
+              alert('Por favor seleccione el tamaño.');
+              return false;
+            }
           }
         }
       </script>
@@ -288,9 +324,9 @@ app.post('/submit', ipWhitelist, async (req, res) => {
     tipo: tipo || '', // nacional o fin_corte
   };
 
-  // Solo agregar tamaño si NO es nacional
-  if (tipo !== 'nacional') {
-    data.tamaño = tamano;
+  // Solo incluir tamaño si la combinación lo permite (regla de negocio)
+  if (tipo !== 'nacional' && isSizeAllowed(variedad, sanitizedBloque, tamano)) {
+    data.tamaño = String(tamano).toLowerCase();
   }
 
   console.log('[SUBMIT]', {
@@ -318,4 +354,3 @@ app.post('/submit', ipWhitelist, async (req, res) => {
 app.listen(port, () => {
   console.log(`Servidor escuchando en http://localhost:${port}`);
 });
-
