@@ -60,6 +60,18 @@ app.get('/', (req, res) => {
       variedades = [
         { value: 'freedom', label: 'Freedom' },
       ];
+    } else if (bloque === '7') {
+      variedades = [
+        { value: 'candlelight', label: 'Candlelight' },
+        { value: 'deep purple', label: 'Deep Purple' },
+      ];
+    } } else if (bloque === '8') {
+      variedades = [
+        { value: 'star platinum', label: 'Star Platinum' },
+        { value: 'candlelight', label: 'Candlelight' },
+        { value: 'sommersand', label: 'Sommersand' },
+        { value: 'Freedom', label: 'Freedom' },
+      ];
     }
 
     return res.send(`
