@@ -120,8 +120,13 @@ app.get('/', (req, res) => {
     variedades = [
       {value: 'freedom', label:'Freedom'},
     ];
-    seleccionVariedad = 'freedom'
-  }
+    seleccionVariedad = 'freedom';
+  } else if (bloque === '7') {
+    variedades = [
+      {value: 'candlelight', label:'Candlelight'},
+      {value: 'deep purple', label: 'Deep Purple'},
+    ];
+    seleccionVariedad = 'candlelight';
 
   res.send(`
     <html lang="es">
