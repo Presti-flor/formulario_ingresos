@@ -72,6 +72,16 @@ app.get('/', (req, res) => {
         { value: 'sommersand', label: 'Sommersand' },
         { value: 'freedom', label: 'Freedom' },
       ];
+    } else if (bloque === '1') {
+      variedades = [
+        { value: 'vendela', label: 'Vendela' },
+        { value: 'pink floyd', label: 'Pink Floyd' },
+      ];
+    } else if (bloque === '2') {
+      variedades = [
+        { value: 'coral reff', label: 'Coral Reff' },
+        { value: 'hummer', label: 'Hummer' },
+      ];
     }
 
     return res.send(`
@@ -146,7 +156,19 @@ app.get('/', (req, res) => {
       {value: 'sommersand', label:'Sommersand'},
       {value: 'freedom', label:'Freedom'},
     ];
-    seleccionVariedad = 'star platinum' 
+    seleccionVariedad = 'star platinum';
+  } else if (bloque === '1') {
+    variedades = [
+      {value: 'vendela', label:'Vendela'},
+      {value: 'pink floyd', label:'Pink Floyd'},
+    ];
+    seleccionVariedad = 'vendela';
+  } else if (bloque === '2') {
+    variedades = [
+      {value: 'coral reff', label:'Coral Reff'},
+      {value: 'hummer', label:'Hummer'},
+    ];
+    seleccionVariedad = 'coral reff'
   }
 
   res.send(`
