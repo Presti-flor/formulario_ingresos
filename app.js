@@ -70,7 +70,7 @@ app.get('/', (req, res) => {
         { value: 'star platinum', label: 'Star Platinum' },
         { value: 'candlelight', label: 'Candlelight' },
         { value: 'sommersand', label: 'Sommersand' },
-        { value: 'Freedom', label: 'Freedom' },
+        { value: 'freedom', label: 'Freedom' },
       ];
     }
 
