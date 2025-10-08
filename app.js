@@ -65,7 +65,7 @@ app.get('/', (req, res) => {
         { value: 'candlelight', label: 'Candlelight' },
         { value: 'deep purple', label: 'Deep Purple' },
       ];
-    } } else if (bloque === '8') {
+    } else if (bloque === '8') {
       variedades = [
         { value: 'star platinum', label: 'Star Platinum' },
         { value: 'candlelight', label: 'Candlelight' },
