@@ -38,7 +38,7 @@ function allowedSizes(variedad, bloque) {
   const v = (variedad || '').toLowerCase().trim();
   const b = String(bloque || '').trim();
   if (v === 'freedom') return ['largo', 'corto', 'ruso'];
-  if (v === 'vendela' && b === '1') return ['ruso', 'na']; // NA se muestra pero se guarda en blanco
+  if (v === 'vendela' && b === '1') return ['ruso', 'na']; // NA se muestra pero se guarda vacío
   return [];
 }
 
@@ -62,7 +62,7 @@ app.get('/', (req, res) => {
   const etapa = req.query.etapa || '';
   const tipo = req.query.tipo || '';
 
-  // ======= FORMULARIO TIPO NACIONAL (tema azul) =========
+  // ======= FORMULARIO TIPO NACIONAL (tema naranja) =========
   if (tipo === 'nacional') {
     let variedades = [];
     if (bloque === '3') {
@@ -111,53 +111,63 @@ app.get('/', (req, res) => {
         <title>Formulario Tallos Nacional</title>
         <link rel="stylesheet" type="text/css" href="/style.css"/>
         <style>
-          body.theme-nacional-blue {
-            background: linear-gradient(120deg, #001f3f, #0074D9);
-            color: #fff;
-            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+          body.theme-nacional-orange {
+            background: #fdfdfd; /* mismo fondo neutro */
+            color: #d85b00; /* tono naranja */
+            font-family: 'Poppins', sans-serif;
           }
           .form-container {
-            background: rgba(255,255,255,0.12);
-            backdrop-filter: blur(6px);
-            padding: 2em;
-            border-radius: 14px;
+            background: #ffffff;
+            border: 2px solid #ffb366;
+            border-radius: 15px;
             width: 90%;
-            max-width: 520px;
+            max-width: 500px;
             margin: 40px auto;
-            box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+            box-shadow: 0 6px 18px rgba(0,0,0,0.1);
+            padding: 2em;
           }
-          .title { margin: 0 0 6px 0; }
-          .subtitle { margin: 0 0 20px 0; opacity: .9; }
-          label { display:block; margin: 10px 0 6px; font-weight: 600; }
+          h1.title, h2.subtitle {
+            color: #d85b00;
+          }
+          label {
+            font-weight: bold;
+            color: #b64a00;
+          }
           input, select {
-            width: 100%; padding: 10px 12px; border: none; border-radius: 8px;
-            margin-bottom: 14px; outline: none;
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ffb366;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            color: #333;
           }
           input[type=submit] {
-            background: #fff; color: #003a78; font-weight: 700; cursor: pointer; transition: .2s;
+            background: #d85b00;
+            color: #fff;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
           }
-          input[type=submit]:hover { background: #cfe6ff; }
-          .pill {
-            display:inline-block; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.18);
-            font-size: 12px; margin-left: 6px;
+          input[type=submit]:hover {
+            background: #ff8c1a;
           }
         </style>
       </head>
-      <body class="theme-nacional-blue">
+      <body class="theme-nacional-orange">
         <div class="form-container">
-          <h1 class="title">REGISTRO NACIONAL <span class="pill">Azul</span></h1>
-          <h2 class="subtitle">Bloque ${bloque} ${etapa ? `— Etapa: ${etapa.charAt(0).toUpperCase() + etapa.slice(1)}` : ''}</h2>
+          <h1 class="title">REGISTRO NACIONAL</h1>
+          <h2 class="subtitle">Bloque ${bloque} ${etapa ? `- Etapa: ${etapa.charAt(0).toUpperCase() + etapa.slice(1)}` : ''}</h2>
           <form action="/submit" method="POST">
             <label for="bloque">Bloque:</label>
-            <p style="font-size: 1.3em; padding: 8px 0 2px;">${bloque}</p>
+            <p style="font-size: 1.5em; padding: 10px;">${bloque}</p><br><br>
 
             <label for="variedad">Variedad:</label>
             <select name="variedad" required>
               ${variedades.map(v => `<option value="${v.value}">${v.label}</option>`).join('')}
-            </select>
+            </select><br><br>
 
             <label for="numero_tallos">Número de tallos:</label>
-            <input type="number" name="numero_tallos" required min="1" step="1" inputmode="numeric" pattern="[0-9]*">
+            <input type="number" name="numero_tallos" required><br><br>
 
             <input type="hidden" name="bloque" value="${bloque}" />
             <input type="hidden" name="etapa" value="${etapa}" />
@@ -247,7 +257,6 @@ app.get('/', (req, res) => {
             ${variedades.map(v => `<option value="${v.value}" ${v.value===seleccionVariedad?'selected':''}>${v.label}</option>`).join('')}
           </select><br>
 
-          <!-- Sección tamaño: aparece SOLO si la combinación lo permite -->
           <div id="tamanoSection" class="hidden">
             <label for="tamano">Elija Tamaño:</label>
             <div class="tamano-options" id="tamanoOptions"></div>
@@ -255,7 +264,7 @@ app.get('/', (req, res) => {
           </div><br>
 
           <label for="numero_tallos">Número de tallos:</label>
-          <input type="number" name="numero_tallos" required min="1" step="1" inputmode="numeric" pattern="[0-9]*"><br>
+          <input type="number" name="numero_tallos" required><br>
 
           <input type="hidden" name="etapa" value="${etapa}" />
           <input type="hidden" name="bloque" value="${bloque}" />
@@ -270,7 +279,7 @@ app.get('/', (req, res) => {
           const v = (variedad || '').toLowerCase().trim();
           const b = String(bloque || '').trim();
           if (v === 'freedom') return ['largo','corto','ruso'];
-          if (v === 'vendela' && b === '1') return ['ruso','na']; // NA visible, se guarda en blanco
+          if (v === 'vendela' && b === '1') return ['ruso','na'];
           return [];
         }
 
@@ -295,17 +304,15 @@ app.get('/', (req, res) => {
           opts.forEach(t => {
             const div = document.createElement('div');
             div.className = 'tamano-option';
-            div.textContent = t.toUpperCase(); // Visualmente en mayúsculas
-            div.dataset.value = t; // valor real en minúsculas
+            div.textContent = t.toUpperCase();
+            div.dataset.value = t;
             div.onclick = function(){
               document.querySelectorAll('.tamano-option').forEach(x => x.classList.remove('selected'));
               div.classList.add('selected');
-              hiddenInput.value = div.dataset.value; // 'largo' | 'corto' | 'ruso' | 'na'
+              hiddenInput.value = div.dataset.value;
             };
             container.appendChild(div);
           });
-
-          // Selección por defecto: primer botón
           container.querySelector('.tamano-option')?.click();
         }
 
@@ -344,13 +351,12 @@ app.post('/submit', ipWhitelist, async (req, res) => {
     variedad,
     numero_tallos: sanitizedNumeroTallos,
     etapa: etapa || '',
-    tipo: tipo || '', // nacional o fin_corte
+    tipo: tipo || '',
   };
 
-  // NA => blanco (no enviar campo); tamaños válidos => guardar; nacional => jamás guarda tamaño
   const sizeForStorage = normalizeSizeForStorage(variedad, sanitizedBloque, tamano, tipo);
   if (sizeForStorage !== null) {
-    data.tamaño = sizeForStorage; // 'ruso' | 'largo' | 'corto'
+    data.tamaño = sizeForStorage;
   }
 
   console.log('[SUBMIT]', { fromIp: getClientIp(req), data });
