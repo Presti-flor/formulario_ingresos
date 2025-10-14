@@ -56,7 +56,7 @@ function normalizeSizeForStorage(variedad, bloque, tamano, tipo) {
   return t; // 'largo' | 'corto' | 'ruso'
 }
 
-// ==================== RUTA PRINCIPAL ====================
+// ==================== RUTA PRINCIPAL ==========================
 app.get('/', (req, res) => {
   const bloque = req.query.bloque || '3';
   const etapa = req.query.etapa || '';
