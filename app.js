@@ -101,6 +101,34 @@ app.get('/', (req, res) => {
         { value: 'coral reff', label: 'Coral Reff' },
         { value: 'hummer', label: 'Hummer' },
       ];
+    } else if (bloque === '9') {
+      variedades = [
+        { value: 'freedom', label: 'Freedom' },
+        
+      ];
+    } else if (bloque === '10') {
+      variedades = [
+        { value: 'shimmer', label: 'Shimmer'},
+        { value: 'freedom', label: 'Freedom'},
+      ];
+    } else if (bloque === '11') {
+      variedades = [
+        { value: 'pink mondial', label: 'Pink Mondial'},
+        { value: 'whithe ohora', label: 'Whithe Ohora'},
+        { value: 'pink ohora', label: 'Pink Ohora'},
+        { value: 'mondial', label: 'Mondial'},
+      ]
+    } else if (bloque === '12') {
+      variedades = [
+        { value: 'mondial', label: 'Mondial'},
+        { value: 'blessing', label: 'Blessing'},
+        { value: 'pink amareto', label: 'Pink Amareto'},
+        { value: 'sommersand', label: 'Sommersand'},
+      ]
+    } else if (bloque === '13') {
+      variedades = [
+        { value: 'freedom', label: 'Freedom'},
+      ]
     }
 
     return res.send(`
