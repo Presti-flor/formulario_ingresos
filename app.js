@@ -209,7 +209,7 @@ app.get('/', (req, res) => {
     `);
   }
 
-  // ======= FORMULARIO FIN DE CORTE =========
+  // ======= FORMULARIO FIN DE CORTE =============
   let variedades = [];
   let seleccionVariedad = 'momentum';
 
