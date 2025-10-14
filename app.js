@@ -62,7 +62,7 @@ app.get('/', (req, res) => {
   const etapa = req.query.etapa || '';
   const tipo = req.query.tipo || '';
 
-  // ======= FORMULARIO TIPO NACIONAL (tema naranja) =========
+  // ======= FORMULARIO TIPO NACIONAL (tema naranja) =============
   if (tipo === 'nacional') {
     let variedades = [];
     if (bloque === '3') {
@@ -398,7 +398,7 @@ app.get('/', (req, res) => {
   `);
 });
 
-// ==================== RUTA POST ====================
+// ==================== RUTA POST ============================
 app.post('/submit', ipWhitelist, async (req, res) => {
   const { variedad, tamano, numero_tallos, etapa, bloque, tipo } = req.body;
 
