@@ -255,7 +255,40 @@ app.get('/', (req, res) => {
       { value: 'hummer', label: 'Hummer' },
     ];
     seleccionVariedad = 'coral reff';
-  }
+  } else if (bloque === '9') {
+      variedades = [
+        { value: 'freedom', label: 'Freedom' },
+        
+      ];
+      seleccionVariedad = 'freedom';
+    } else if (bloque === '10') {
+      variedades = [
+        { value: 'shimmer', label: 'Shimmer'},
+        { value: 'freedom', label: 'Freedom'},
+      ];
+      seleccionVariedad = 'shimmer';
+    } else if (bloque === '11') {
+      variedades = [
+        { value: 'pink mondial', label: 'Pink Mondial'},
+        { value: 'whithe ohora', label: 'Whithe Ohora'},
+        { value: 'pink ohora', label: 'Pink Ohora'},
+        { value: 'mondial', label: 'Mondial'},
+      ];
+      seleccionVariedad = 'pink mondial';
+    } else if (bloque === '12') {
+      variedades = [
+        { value: 'mondial', label: 'Mondial'},
+        { value: 'blessing', label: 'Blessing'},
+        { value: 'pink amareto', label: 'Pink Amareto'},
+        { value: 'sommersand', label: 'Sommersand'},
+      ];
+      seleccionVariedad = 'mondial';
+    } else if (bloque === '13') {
+      variedades = [
+        { value: 'freedom', label: 'Freedom'},
+      ];
+      seleccionVariedad = 'freedom';
+    }
 
   res.send(`
     <html lang="es">
