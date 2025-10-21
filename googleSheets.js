@@ -22,6 +22,8 @@ async function addRecord(data) {
 
   // Depuración: Verificar los datos antes de enviarlos
   console.log('Datos antes de enviar a Google Sheets:', {
+
+    unique_id: data.unique_id,
     fecha: data.fecha,
     bloque: sanitizedBloque, // Usamos el bloque limpiado
     variedad: data.variedad,
@@ -37,7 +39,7 @@ async function addRecord(data) {
       valueInputOption: 'RAW',
       resource: {
         values: [
-          [data.fecha, sanitizedBloque, data.variedad, data.tamaño, data.numero_tallos, data.etapa, data.tipo],
+          [data.fecha, sanitizedBloque, data.variedad, data.tamaño, data.numero_tallos, data.etapa, data.tipo, data.unique_id],
         ],
       },
     });
