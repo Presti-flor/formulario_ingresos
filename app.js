@@ -11,7 +11,7 @@ app.use(bodyParser.json());
 
 // ====== IP Whitelist Setup ======
 app.set('trust proxy', true);
-const ALLOWED_IPS = (process.env.ALLOWED_IPS || '186.102.115.133,186.102.51.69,186.102.77.146,190.61.45.230,192.168.10.23,192.168.10.1,186.102.62.30,186.102.55.56')
+const ALLOWED_IPS = (process.env.ALLOWED_IPS || '181.78.78.61,186.102.115.133,186.102.51.69,186.102.77.146,190.61.45.230,192.168.10.23,192.168.10.1,186.102.62.30,186.102.55.56')
   .split(',')
   .map(ip => ip.trim())
   .filter(Boolean);
