@@ -38,7 +38,7 @@ function allowedSizes(variedad, bloque) {
   const v = (variedad || '').toLowerCase().trim();
   const b = String(bloque || '').trim();
   if (v === 'freedom') return ['largo', 'corto', 'ruso'];
-  if (v === 'vendela' && b === '1') return ['ruso', 'na']; // NA se muestra pero se guarda vacío
+  if (v === 'vendela' && b === '1') return ['na']; // NA se muestra pero se guarda vacío
   return [];
 }
 
